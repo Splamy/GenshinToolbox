@@ -189,7 +189,7 @@ namespace GenshinToolbox.Player.Songs
 			var subMelo = MuseEngine.Pause(Full * 8) + MuseEngine.Shift(m9_16 + MuseEngine.Pause(QuartDot) + m17_24, -7);
 			var guitar = MuseEngine.Pause(Full * 15) + guit_16_24;
 
-			return new Song(132, "Warframe (handwritten)", baseMelo, subMelo, guitar);
+			return new Song(new MXMlConf { Speed = 132 }, "Warframe (handwritten)", baseMelo, subMelo, guitar);
 		}
 	}
 }

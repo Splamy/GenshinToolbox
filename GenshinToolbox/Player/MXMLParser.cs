@@ -10,8 +10,9 @@ namespace GenshinToolbox.Player
 {
 	public class MXMLParser
 	{
-		public static Song Parse(string file, MXMlConf conf)
+		public static Song Parse(MXMlConf conf)
 		{
+			var file = conf.Path;
 			var name = conf.Name ?? Path.GetFileNameWithoutExtension(file)?.Replace('_', ' ') ?? file ?? "Unknown";
 			Console.WriteLine("Parsing {0}", name);
 
@@ -197,7 +198,7 @@ namespace GenshinToolbox.Player
 							_ => throw new InvalidOperationException(),
 						};
 
-						Console.Write(" <{0}{2} {1}♫>", modOct, num, modDir > 0 ? '⬆' : '⬇');
+						Console.Write(" <Ξ{0}{1} Σ{2}♫>", modOct, modDir > 0 ? '⬆' : '⬇', num);
 						switch (scaleConf.Sf)
 						{
 							case ScaleFunction.Drop:
@@ -249,12 +250,14 @@ namespace GenshinToolbox.Player
 				Console.WriteLine();
 			}
 
-			return new Song(conf.Speed, name, finalVoices);
+			return new Song(conf, name, finalVoices);
 		}
 	}
 
 	public class MXMlConf
 	{
+		public string Path { get; init; }
+		public string Link { get; init; }
 		public string Name { get; set; }
 		public float Speed { get; set; }
 		public bool HonorRepeats { get; set; }

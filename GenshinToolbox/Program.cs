@@ -26,7 +26,8 @@ namespace GenshinToolbox
 			{
 				case "p":
 				case "player":
-					MuseEngine.RunMusic();
+					var museEngine = new MuseEngine();
+					museEngine.InteractiveConsole();
 					break;
 
 				case "c":
