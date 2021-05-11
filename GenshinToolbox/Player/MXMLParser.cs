@@ -12,7 +12,7 @@ namespace GenshinToolbox.Player
 	{
 		public static Song Parse(string file, MXMlConf conf)
 		{
-			var name = conf.Name ?? Path.GetFileNameWithoutExtension(file) ?? file ?? "Unknown";
+			var name = conf.Name ?? Path.GetFileNameWithoutExtension(file)?.Replace('_', ' ') ?? file ?? "Unknown";
 			Console.WriteLine("Parsing {0}", name);
 
 			// TODO FIX:
@@ -169,14 +169,14 @@ namespace GenshinToolbox.Player
 				if (octMax - octMin > scaleConf.Range)
 				{
 				ask:
-					if (scaleConf.sf == ScaleFunction.None)
+					if (scaleConf.Sf == ScaleFunction.None)
 					{
 						Console.WriteLine();
 						Console.WriteLine("Scale to big! Drop (d) or Clamp (c) ?");
 						switch (Console.ReadKey().Key)
 						{
-							case ConsoleKey.D: scaleConf.sf = ScaleFunction.Drop; break;
-							case ConsoleKey.C: scaleConf.sf = ScaleFunction.Clamp; break;
+							case ConsoleKey.D: scaleConf.Sf = ScaleFunction.Drop; break;
+							case ConsoleKey.C: scaleConf.Sf = ScaleFunction.Clamp; break;
 							default: goto ask;
 						}
 					}
@@ -189,7 +189,7 @@ namespace GenshinToolbox.Player
 						var numMax = voice.Accords.SelectMany(a => a.Notes).Count(n => n.Oct == octMax);
 
 						//int modOct = 0, num = 0, modDir = 0;
-						var (modOct, num, modDir) = (scaleConf.sd) switch
+						var (modOct, num, modDir) = (scaleConf.Sd) switch
 						{
 							ScaleDirection.Auto => numMin < numMax ? (octMin, numMin, 1) : (octMax, numMax, -1),
 							ScaleDirection.FromLowerUp => (octMin, numMin, 1),
@@ -198,7 +198,7 @@ namespace GenshinToolbox.Player
 						};
 
 						Console.Write(" <{0}{2} {1}♫>", modOct, num, modDir > 0 ? '⬆' : '⬇');
-						switch (scaleConf.sf)
+						switch (scaleConf.Sf)
 						{
 							case ScaleFunction.Drop:
 								voice.Accords.ForEach(a => a.Notes.RemoveAll(n => n.Oct == modOct));
@@ -264,14 +264,14 @@ namespace GenshinToolbox.Player
 		public Dictionary<string, ScaleConf> Autoscale { get; set; } = new();
 		/// <summary>Inclusive</summary>
 		public int? MeasureStart { get; set; } = null;
-		/// <summary>Excludive</summary>
+		/// <summary>Exclusive</summary>
 		public int? MeasureEnd { get; set; } = null;
 	}
 
 	public class ScaleConf
 	{
-		public ScaleFunction sf { get; set; } = ScaleFunction.None;
-		public ScaleDirection sd { get; set; } = ScaleDirection.Auto;
+		public ScaleFunction Sf { get; set; } = ScaleFunction.None;
+		public ScaleDirection Sd { get; set; } = ScaleDirection.Auto;
 		public int? LowerOctTarget { get; set; } = null;
 		public int Range { get; set; } = 2;
 
@@ -281,8 +281,8 @@ namespace GenshinToolbox.Player
 			int? lowerOctTarget = null,
 			int range = 2)
 		{
-			this.sf = sf;
-			this.sd = sd;
+			Sf = sf;
+			Sd = sd;
 			LowerOctTarget = lowerOctTarget;
 			Range = range;
 		}

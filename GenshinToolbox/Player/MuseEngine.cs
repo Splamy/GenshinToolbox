@@ -31,158 +31,159 @@ namespace GenshinToolbox.Player
 
 		public static void RunMusic()
 		{
-			var list = new List<Song>();
-
-			// https://musescore.com/user/9192181/scores/2032511
-			list.Add(MXMLParser.Parse(SongPath + "Sakkijarven_polkka.mxl", new MXMlConf
+			var list = new List<Song>
 			{
-				Speed = 240,
-				HonorRepeats = true,
-				Autoscale = new()
+				// https://musescore.com/user/9192181/scores/2032511
+				MXMLParser.Parse(SongPath + "Sakkijarven_polkka.mxl", new MXMlConf
 				{
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto) }
-				},
-			}));
+					Speed = 240,
+					HonorRepeats = true,
+					Autoscale = new()
+					{
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto) }
+					},
+				}),
 
-			// https://musescore.com/user/70981/scores/1086966
-			list.Add(MXMLParser.Parse(SongPath + "_Beethoven_Virus_.mxl", new MXMlConf
-			{
-				Speed = 150,
-				HonorRepeats = false,
-				Autoscale = new()
+				// https://musescore.com/user/70981/scores/1086966
+				MXMLParser.Parse(SongPath + "_Beethoven_Virus_.mxl", new MXMlConf
 				{
-					{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto) },
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp) }
-				},
-			}));
+					Speed = 150,
+					HonorRepeats = false,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto) },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp) }
+					},
+				}),
 
-			// https://musescore.com/user/1417101/scores/960611
-			list.Add(MXMLParser.Parse(SongPath + "La_Valse_d'Amélie_(original_version)_Yann_Tiersen.mxl", new MXMlConf
-			{
-				Speed = 360,
-				HonorRepeats = false,
-				Autoscale = new()
+				// https://musescore.com/user/1417101/scores/960611
+				MXMLParser.Parse(SongPath + "La_Valse_d'Amélie_(original_version)_Yann_Tiersen.mxl", new MXMlConf
 				{
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto) }
-				},
-			}));
+					Speed = 360,
+					HonorRepeats = false,
+					Autoscale = new()
+					{
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto) }
+					},
+				}),
 
-			//list.Add(Warframe_LiftTogether.Get());
+				//list.Add(Warframe_LiftTogether.Get());
 
-			// https://musescore.com/rhythmicrevival/never_gonna_give_you_up_for_two_melodicas
-			list.Add(MXMLParser.Parse(SongPath + "Never_Gonna_Give_You_Up_-_Melodica_Duet.mxl", new MXMlConf
-			{
-				Speed = 120,
-				HonorRepeats = false,
-				Transpose = Transpose.F2,
-			}));
-
-			// https://musescore.com/user/28837378/scores/5144713
-			list.Add(MXMLParser.Parse(SongPath + "Tetris_Theme_(Korobeniki)_Easy_to_play.mxl", new MXMlConf
-			{
-				Speed = 80,
-				HonorRepeats = false,
-			}));
-
-			// https://musescore.com/radical_edward/scores/3660686
-			list.Add(MXMLParser.Parse(SongPath + "A_Cruel_Angel's_Thesis_-_Neon_Genesis_Evangelion.mxl", new MXMlConf
-			{
-				Speed = 120,
-				HonorRepeats = false,
-				Transpose = Transpose.F3,
-				Autoscale = new()
+				// https://musescore.com/rhythmicrevival/never_gonna_give_you_up_for_two_melodicas
+				MXMLParser.Parse(SongPath + "Never_Gonna_Give_You_Up_-_Melodica_Duet.mxl", new MXMlConf
 				{
-					{ "P1_2", new(ScaleFunction.None, ScaleDirection.Auto, 0) }
-				},
-			}));
+					Speed = 120,
+					HonorRepeats = false,
+					Transpose = Transpose.F2,
+				}),
 
-			// https://musescore.com/user/18080646/scores/3993531
-			list.Add(MXMLParser.Parse(SongPath + "Song_of_Storms_Piano_and_Ocarina.mxl", new MXMlConf
-			{
-				Speed = 100,
-				HonorRepeats = false,
-				Transpose = Transpose.F1,
-				PickInstruments = new()
+				// https://musescore.com/user/28837378/scores/5144713
+				MXMLParser.Parse(SongPath + "Tetris_Theme_(Korobeniki)_Easy_to_play.mxl", new MXMlConf
 				{
-					"Oc.",
-				},
-				Autoscale = new()
-				{
-					// { "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 1, 1) },
-					// { "P2_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
-					// { "P2_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
-				}
-			}));
+					Speed = 80,
+					HonorRepeats = false,
+				}),
 
-			// https://musescore.com/user/14429466/scores/3073586
-			list.Add(MXMLParser.Parse(SongPath + "Nothing_Else_Matters_(by_Metallica).mxl", new MXMlConf
-			{
-				Speed = 100,
-				HonorRepeats = false,
-				Transpose = Transpose.S1,
-				MeasureStart = 8,
-				Autoscale = new()
+				// https://musescore.com/radical_edward/scores/3660686
+				MXMLParser.Parse(SongPath + "A_Cruel_Angel's_Thesis_-_Neon_Genesis_Evangelion.mxl", new MXMlConf
 				{
-					{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto, 1, 1) },
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 1) },
-				}
-			}));
+					Speed = 120,
+					HonorRepeats = false,
+					Transpose = Transpose.F3,
+					Autoscale = new()
+					{
+						{ "P1_2", new(ScaleFunction.None, ScaleDirection.Auto, 0) }
+					},
+				}),
 
-			// https://musescore.com/user/21965011/scores/4217351
-			list.Add(MXMLParser.Parse(SongPath + "Hallelujah.mxl", new MXMlConf
-			{
-				Speed = 50,
-				HonorRepeats = false,
-				Transpose = Transpose.None,
-				MeasureEnd = 30,
-				Autoscale = new()
+				// https://musescore.com/user/18080646/scores/3993531
+				MXMLParser.Parse(SongPath + "Song_of_Storms_Piano_and_Ocarina.mxl", new MXMlConf
 				{
-					{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromUpperDown) },
-				}
-			}));
+					Speed = 100,
+					HonorRepeats = false,
+					Transpose = Transpose.F1,
+					PickInstruments = new()
+					{
+						"Oc.",
+					},
+					Autoscale = new()
+					{
+						// { "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 1, 1) },
+						// { "P2_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
+						// { "P2_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
+					}
+				}),
 
-			// https://musescore.com/user/252946/scores/235796
-			list.Add(MXMLParser.Parse(SongPath + "Gigi_d'Agostino_-_L'amour_toujours_(I'll_fly_with_you).mxl", new MXMlConf
-			{
-				Speed = 80,
-				HonorRepeats = false,
-				Transpose = Transpose.S2,
-				Autoscale = new()
+				// https://musescore.com/user/14429466/scores/3073586
+				MXMLParser.Parse(SongPath + "Nothing_Else_Matters_(by_Metallica).mxl", new MXMlConf
 				{
-					{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto) },
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0) },
-				}
-			}));
+					Speed = 100,
+					HonorRepeats = false,
+					Transpose = Transpose.S1,
+					MeasureStart = 8,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto, 1, 1) },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 1) },
+					}
+				}),
 
-			// https://musescore.com/user/27176639/scores/6612455
-			list.Add(MXMLParser.Parse(SongPath + "Soon_May_The_Wellerman_Come.mxl", new MXMlConf
-			{
-				Speed = 220,
-				HonorRepeats = false,
-				Transpose = Transpose.F3,
-				MeasureEnd = 17,
-				Autoscale = new()
+				// https://musescore.com/user/21965011/scores/4217351
+				MXMLParser.Parse(SongPath + "Hallelujah.mxl", new MXMlConf
 				{
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
-				}
-			}));
+					Speed = 50,
+					HonorRepeats = false,
+					Transpose = Transpose.None,
+					MeasureEnd = 30,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromUpperDown) },
+					}
+				}),
 
-			// https://musescore.com/sh_yy/unravel-animenz-toyko-ghoul
-			list.Add(MXMLParser.Parse(SongPath + "Unravel_[by_Animenz]_-_Tokyo_Ghoul.mxl", new MXMlConf
-			{
-				Name = "[Meh] Tokyo Ghoul - Unravel",
-				Speed = 400,
-				Transpose = Transpose.F2,
-				MeasureStart = 0,
-				MeasureEnd = 35,
-				Autoscale = new()
+				// https://musescore.com/user/252946/scores/235796
+				MXMLParser.Parse(SongPath + "Gigi_d'Agostino_-_L'amour_toujours_(I'll_fly_with_you).mxl", new MXMlConf
 				{
-					{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 1, 1) },
-					{ "P1_2", new(ScaleFunction.Clamp, ScaleDirection.Auto, 1, 1) },
-					{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromUpperDown, 0, 0) },
-					{ "P1_6", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 0) },
-				}
-			}));
+					Speed = 80,
+					HonorRepeats = false,
+					Transpose = Transpose.S2,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto) },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0) },
+					}
+				}),
+
+				// https://musescore.com/user/27176639/scores/6612455
+				MXMLParser.Parse(SongPath + "Soon_May_The_Wellerman_Come.mxl", new MXMlConf
+				{
+					Speed = 220,
+					HonorRepeats = false,
+					Transpose = Transpose.F3,
+					MeasureEnd = 17,
+					Autoscale = new()
+					{
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
+					}
+				}),
+
+				// https://musescore.com/sh_yy/unravel-animenz-toyko-ghoul
+				MXMLParser.Parse(SongPath + "Unravel_[by_Animenz]_-_Tokyo_Ghoul.mxl", new MXMlConf
+				{
+					Name = "[Meh] Tokyo Ghoul - Unravel",
+					Speed = 400,
+					Transpose = Transpose.F2,
+					MeasureStart = 0,
+					MeasureEnd = 35,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 1, 1) },
+						{ "P1_2", new(ScaleFunction.Clamp, ScaleDirection.Auto, 1, 1) },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromUpperDown, 0, 0) },
+						{ "P1_6", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 0) },
+					}
+				})
+			};
 
 			PlayDialogueLoop(list);
 		}
@@ -287,7 +288,7 @@ namespace GenshinToolbox.Player
 
 		public static void Play(Song song)
 		{
-			var merged = Merge(song.voices);
+			var merged = Merge(song.Voices);
 			var length = song.GetLength();
 			var played = TimeSpan.Zero;
 			var drawLine = Console.CursorTop;
@@ -318,18 +319,18 @@ namespace GenshinToolbox.Player
 		public static Voice Pause(int len) => new(new List<Accord> { new Accord(len) });
 	}
 
-	public record Song(float bpm, string Name, List<Voice> voices)
+	public record Song(float Bpm, string Name, List<Voice> Voices)
 	{
 		public Song(float bpm, string name, params Voice[] voices) : this(bpm, name, voices.ToList()) { }
 
 		public TimeSpan LenToTime(int len)
 		{
-			return TimeSpan.FromSeconds((len / (float)LengthQuarter) / (bpm / 60));
+			return TimeSpan.FromSeconds((len / (float)LengthQuarter) / (Bpm / 60));
 		}
 
 		public TimeSpan GetLength()
 		{
-			return LenToTime(voices.Max(v => v.Accords.Sum(a => a.Length)));
+			return LenToTime(Voices.Max(v => v.Accords.Sum(a => a.Length)));
 		}
 	}
 

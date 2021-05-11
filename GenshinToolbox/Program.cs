@@ -29,8 +29,7 @@ namespace GenshinToolbox
 					MuseEngine.RunMusic();
 					break;
 
-				case "a":
-				case "autocollect":
+				case "c":
 				case "collect":
 					AutoCollector.AutoCollect();
 					break;

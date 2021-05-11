@@ -1,4 +1,5 @@
 ﻿using System.Threading;
+using WindowsInput.Native;
 using static GenshinToolbox.NativeMethods;
 
 namespace GenshinToolbox.Collector
@@ -9,28 +10,44 @@ namespace GenshinToolbox.Collector
 
 		private static readonly POINT[] Expeditions = {
 			// Mondstad
-			//        (1)
-			//   (5)       (2)
-			//      (6)      (3)
-			//                (4)
-			new(810, 250), // 1 - Flower/Egg 1
-			new(1060,340), // 2 - Ores
-			new(1120,450), // 3 - Steak
-			new(1180,660), // 4 - Ores
-			new(-1,-1), // 5 - Mora
-			new(-1,-1), // 6 - Carrot
-			// Liyue
-			//     (1)
-			//          (2)
-			//  (3)   (4)     (5)
-			//      (6)
-			new(-1,-1), // 1 - Mora
-			new(960,450), // 2 - Ores
-			new(-1,-1), // 3 - Mora
-			new(-1,-1), // 4 - Lotus
+			//        (0)
+			//   (4)       (1)
+			//      (5)      (2)
+			//                (3)
+			new(810, 250), // 0 - Flower/Egg 1
+			new(1060,340), // 1 - Ores
+			new(1120,450), // 2 - Steak
+			new(1180,660), // 3 - Ores
+			new(-1,-1), // 4 - Mora
 			new(-1,-1), // 5 - Carrot
-			new(-1,-1), // 6 - Lotus
+			// Liyue
+			//     (0)
+			//          (1)
+			//  (2)   (3)     (4)
+			//      (5)
+			new(-1,-1), // 0 - Mora
+			new(960,450), // 1 - Ores
+			new(-1,-1), // 2 - Mora
+			new(-1,-1), // 3 - Lotus
+			new(-1,-1), // 4 - Carrot
+			new(-1,-1), // 5 - Lotus
 		};
+
+		enum Expedition
+		{
+			M_Flower = 0,
+			M_Ores1 = 1,
+			M_Steak = 2,
+			M_Ores2 = 3,
+			M_Mora = 4,
+			M_Carrot = 5,
+			L_Mora1 = 6,
+			L_Ores = 7,
+			L_Mora2 = 8,
+			L_Lotus1 = 9,
+			L_Carrot = 10,
+			L_Lotus2 = 11,
+		}
 
 		private static readonly POINT MondstadtButton = new(90, 165);
 		private static readonly POINT LiyueButton = new(90, 235);
@@ -48,46 +65,46 @@ namespace GenshinToolbox.Collector
 		{
 			Util.Focus();
 
-			Thread.Sleep(200);
-
-			ClickTimed(MondstadtButton);
 			Thread.Sleep(300);
+			ClickTimed(MondstadtButton);
 
-			CollectExpedition(0);
-			CollectExpedition(1);
-			CollectExpedition(2);
-			CollectExpedition(3);
+			CollectExpedition(Expedition.M_Flower);
+			CollectExpedition(Expedition.M_Ores1);
+			CollectExpedition(Expedition.M_Steak);
+			CollectExpedition(Expedition.M_Ores2);
 
-			DispatchExpedition(0, 3);
-			DispatchExpedition(1, 0);
-			DispatchExpedition(2, 1);
-			DispatchExpedition(3, 4);
+			DispatchExpedition(Expedition.M_Ores1, 0);
+			DispatchExpedition(Expedition.M_Ores2, 1);
+			DispatchExpedition(Expedition.M_Flower, 3);
+			DispatchExpedition(Expedition.M_Steak, 4);
 
-			Thread.Sleep(500);
+			Thread.Sleep(300);
 			ClickTimed(LiyueButton);
 
-			CollectExpedition(7);
-			DispatchExpedition(7, 0);
+			CollectExpedition(Expedition.L_Ores);
+			DispatchExpedition(Expedition.L_Ores, 0);
 		}
 
-		static void CollectExpedition(int ex)
+		static void CollectExpedition(Expedition ex)
 		{
-			ClickTimed(Expeditions[ex]);
+			ClickTimed(Expeditions[(int)ex]);
 			ClickTimed(ClaimButton);
-			Thread.Sleep(300);
-			ClickTimed(ClaimRewardsArea);
+			PressTimed(VirtualKeyCode.ESCAPE);
 			Thread.Sleep(100);
 		}
 
-		static void DispatchExpedition(int ex, int character)
+		static void DispatchExpedition(Expedition ex, int character)
 		{
-			ClickTimed(Expeditions[ex]);
+			ClickTimed(Expeditions[(int)ex]);
 			ClickTimed(Pick20hLength);
 			ClickTimed(ClaimButton);
 			ClickTimed(new(
 				CharactersListOffset.Left + CharactersBoxSize.Left / 2,
 				CharactersListOffset.Top + CharactersBoxSize.Top / 2 + CharactersBoxSize.Top * character
 				));
+			// Sanity click, when we try to dispatch a already running expedition
+			// at this point the 'Are you sure to cancel' dialogue will be up
+			// so we close it in case.
 			ClickTimed(ClaimRewardsArea);
 		}
 
@@ -95,10 +112,17 @@ namespace GenshinToolbox.Collector
 		{
 			SetRelativeCursorPos(p);
 			Thread.Sleep(MinFrames);
-			Util.inp.Mouse.LeftButtonDown();
+			//Util.inp.Mouse.LeftButtonDown();
+			//Thread.Sleep(MinFrames);
+			//Util.inp.Mouse.LeftButtonUp();
+			//Thread.Sleep(MinFrames);
+			Util.inp.Mouse.LeftButtonClick();
 			Thread.Sleep(MinFrames);
-			Util.inp.Mouse.LeftButtonUp();
-			Thread.Sleep(MinFrames);
+		}
+
+		public static void PressTimed(VirtualKeyCode key)
+		{
+			Util.inp.Keyboard.KeyPress(key);
 		}
 
 		public static void SetRelativeCursorPos(POINT p)
