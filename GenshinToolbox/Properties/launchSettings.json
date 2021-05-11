@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GenshinToolbox": {
+      "commandName": "Project",
+      "commandLineArgs": "-p"
+    }
+  }
+}
