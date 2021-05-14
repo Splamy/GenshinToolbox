@@ -183,10 +183,36 @@ namespace GenshinToolbox.Player
 					Link = "https://musescore.com/user/12700621/scores/5212860",
 					Speed = 160,
 					Transpose = Transpose.S1,
+					MeasureEnd = 52,
+					ForwardAsRepeat = true,
 					Autoscale = new()
 					{
-						//{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
-						//{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.FromLowerUp, 0, 1) },
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto, 1) },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 0) },
+					}
+				},
+				new MXMlConf {
+					Path = SongPath + "Pirates_of_the_Caribbean_-_He's_a_Pirate-Piano.mxl" ,
+					Link = "https://musescore.com/user/2830596/scores/1421196",
+					TargetLength = new TimeSpan(0, 1, 23),
+					Transpose = Transpose.F1,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0) },
+						//{ "P1_2", ScaleConf.Disabled },
+						{ "P1_5", new(ScaleFunction.Clamp, ScaleDirection.Auto, 0, 0) },
+					}
+				},
+				new MXMlConf {
+					Path = SongPath + "Frog's_Theme_from_Chrono_Trigger.mxl" ,
+					Link = "https://musescore.com/namvet/scores/50457",
+					TargetLength = new TimeSpan(0, 0, 45),
+					MeasureEnd = 25,
+					Transpose = Transpose.F7,
+					Autoscale = new()
+					{
+						{ "P1_1", new(ScaleFunction.Drop, ScaleDirection.Auto, 1) },
+						{ "P1_5", new(ScaleFunction.Drop, ScaleDirection.Auto, 0, 0) },
 					}
 				}
 			};
@@ -285,7 +311,7 @@ namespace GenshinToolbox.Player
 				for (int i = 0; i < list.Count; i++)
 				{
 					var song = list[i];
-					var len = song.GetLength();
+					var len = song.RealLength;
 					Console.WriteLine("{0,4}: [{1:mm\\:ss}] {2}", i, len, song.Name);
 				}
 
@@ -347,6 +373,32 @@ namespace GenshinToolbox.Player
 									break;
 								}
 
+							case "pick":
+								{
+									var song = list[int.Parse(parts[1])];
+
+									for (int i = 0; i < song.Voices.Count; i++)
+									{
+										var voice = song.Voices[i];
+										Console.WriteLine("{0,4}: {1}", i, voice.Name);
+									}
+
+									var voiceI = Console.ReadLine();
+									if (string.IsNullOrWhiteSpace(voiceI)) break;
+									var voicePick = song.Voices[int.Parse(voiceI)];
+
+									Play(new Song(song.Conf, song.Name, voicePick));
+
+									break;
+								}
+
+							case "parse":
+								{
+									var conf = Confs[int.Parse(parts[1])];
+									MXMLParser.Parse(conf);
+									break;
+								}
+
 							default:
 								Console.WriteLine("Unknown command");
 								clear = false;
@@ -365,19 +417,22 @@ namespace GenshinToolbox.Player
 		public static void Play(Song song)
 		{
 			var merged = song.Merge();
-			var length = song.GetLength();
+			var length = song.RealLength;
 			var played = TimeSpan.Zero;
 			var drawLine = Console.CursorTop;
 
 			Util.Focus();
+			var timer = Stopwatch.StartNew();
 			foreach (var acc in merged.Accords)
 			{
-				if (!Util.GenshinHasFocus()) break;
+				while (timer.Elapsed < played)
+					Thread.SpinWait(10_000);
 
+				if (!Util.GenshinHasFocus()) break;
 				PlayNote(acc.Notes);
-				var noteLength = song.LenToTime(acc.Length);
-				Thread.Sleep(noteLength);
+				var noteLength = song.TickLength * acc.Length;
 				played += noteLength;
+				//Thread.Sleep(noteLength);
 
 				Console.SetCursorPosition(0, drawLine);
 				var playFill = (int)(Console.BufferWidth * (played / length));
@@ -395,28 +450,42 @@ namespace GenshinToolbox.Player
 
 	public class Song
 	{
-		public float Bpm => Conf.Speed;
-		public string Name { get; set; }
-		public List<Voice> Voices { get; set; }
-		public MXMlConf Conf { get; set; }
+		public string Name { get; }
+		public List<Voice> Voices { get; }
+		public MXMlConf Conf { get; }
+
+		public int TickCount { get; private set; }
+		public TimeSpan RealLength { get; private set; }
+		public TimeSpan TickLength { get; private set; }
 
 		public Song(MXMlConf conf, string name, List<Voice> voices)
 		{
 			Conf = conf;
 			Name = name;
 			Voices = voices;
+
+			RecalcTimes();
 		}
 
 		public Song(MXMlConf conf, string name, params Voice[] voices) : this(conf, name, voices.ToList()) { }
 
-		public TimeSpan LenToTime(int len)
+		private void RecalcTimes()
 		{
-			return TimeSpan.FromSeconds((len / (float)LengthQuarter) / (Bpm / 60));
-		}
-
-		public TimeSpan GetLength()
-		{
-			return LenToTime(Voices.Max(v => v.Accords.Sum(a => a.Length)));
+			TickCount = Voices.Max(v => v.Accords.Sum(a => a.Length));
+			if (Conf.Speed.HasValue)
+			{
+				TickLength = TimeSpan.FromMinutes(1 / (LengthQuarter * Conf.Speed.Value));
+				RealLength = TickLength * TickCount;
+			}
+			else if (Conf.TargetLength.HasValue)
+			{
+				RealLength = Conf.TargetLength.Value;
+				TickLength = RealLength / TickCount;
+			}
+			else
+			{
+				throw new InvalidOperationException("Missing speed");
+			}
 		}
 
 		public Voice Merge()
@@ -425,32 +494,22 @@ namespace GenshinToolbox.Player
 		}
 	}
 
-	public record Note
+	public record Note(Scale S, int Oct)
 	{
-		public Scale S { get; set; }
-		public int Oct { get; set; }
-
-		public Note(Scale s, int oct)
-		{
-			S = s;
-			Oct = oct;
-		}
-
 		public override string ToString() => $"{S}{Oct}";
 	}
 
-	public record Accord
+	public record Accord(int Length, List<Note> Notes)
 	{
-		public int Length { get; set; }
-		public List<Note> Notes { get; set; } = new();
-
 		public Accord(int Length, params Note[] Notes) : this(Length, Notes.ToList()) { }
-		public Accord(int length, List<Note> notes) { (Length, Notes) = (length, notes); }
+		//public Accord(int length, List<Note> notes) { (Length, Notes) = (length, notes); }
 		public override string ToString() => $"<{string.Join(":", Notes)}|{Length}>";
 	}
 
 	public record Voice(List<Accord> Accords)
 	{
+		public string Name { get; set; } = "<?>";
+
 		public static Voice operator +(Voice a, Voice b)
 		{
 			return new Voice(a.Accords.Concat(b.Accords).ToList());

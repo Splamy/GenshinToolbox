@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using WindowsInput.Native;
 using static GenshinToolbox.NativeMethods;
 
@@ -67,6 +68,7 @@ namespace GenshinToolbox.Collector
 
 			Thread.Sleep(300);
 			ClickTimed(MondstadtButton);
+			Thread.Sleep(100);
 
 			CollectExpedition(Expedition.M_Flower);
 			CollectExpedition(Expedition.M_Ores1);
@@ -80,6 +82,7 @@ namespace GenshinToolbox.Collector
 
 			Thread.Sleep(300);
 			ClickTimed(LiyueButton);
+			Thread.Sleep(100);
 
 			CollectExpedition(Expedition.L_Ores);
 			DispatchExpedition(Expedition.L_Ores, 0);
@@ -116,12 +119,14 @@ namespace GenshinToolbox.Collector
 			//Thread.Sleep(MinFrames);
 			//Util.inp.Mouse.LeftButtonUp();
 			//Thread.Sleep(MinFrames);
+			if (!Util.GenshinHasFocus()) Environment.Exit(0);
 			Util.inp.Mouse.LeftButtonClick();
 			Thread.Sleep(MinFrames);
 		}
 
 		public static void PressTimed(VirtualKeyCode key)
 		{
+			if (!Util.GenshinHasFocus()) Environment.Exit(0);
 			Util.inp.Keyboard.KeyPress(key);
 		}
 
