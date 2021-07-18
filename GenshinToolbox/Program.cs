@@ -1,4 +1,6 @@
-﻿using GenshinToolbox.Collector;
+﻿using CommandLine;
+using GenshinToolbox.ArtScraper;
+using GenshinToolbox.Collector;
 using GenshinToolbox.Player;
 using System;
 
@@ -11,34 +13,54 @@ namespace GenshinToolbox
 			MuseEngine.Validate();
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-			string option = "";
-
-			if (args.Length == 0)
-			{
-				// do selection
-			}
-			else
-			{
-				option = args[0].TrimStart('-');
-			}
-
-			switch (option)
-			{
-				case "p":
-				case "player":
+			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions>(args).MapResult(
+				(PlayerOptions o) =>
+				{
 					var museEngine = new MuseEngine();
 					museEngine.InteractiveConsole();
-					break;
-
-				case "c":
-				case "collect":
-					AutoCollector.AutoCollect();
-					break;
-
-				default:
-					Console.WriteLine("Unknown option");
-					break;
-			}
+					return 0;
+				},
+				(CollectOptions o) =>
+				{
+					AutoCollector.AutoCollect(o.CollectSlowdown, o.CollectWarmup);
+					return 0;
+				},
+				(ArtifactsOptions o) =>
+				{
+					Scraper.Run(o);
+					return 0;
+				},
+				errs => 1);
 		}
+	}
+
+
+	[Verb("player", HelpText = "")]
+	class PlayerOptions
+	{
+	}
+	[Verb("collect", HelpText = "")]
+	class CollectOptions
+	{
+		[Option('w', "warmup", Required = false)]
+		public int? CollectWarmup { get; set; }
+		[Option('s', "slowdown", Required = false)]
+		public int? CollectSlowdown { get; set; }
+	}
+	[Verb("artifacts", HelpText = "")]
+	class ArtifactsOptions
+	{
+		[Option('m', "maxcount", Required = false, Default = int.MaxValue)]
+		public int Max { get; set; }
+		[Option('c', "capture", Required = false, Default = false)]
+		public bool Capture { get; set; }
+
+		[Option('a', "analyze", Required = false, Default = false)]
+		public bool Analyze { get; set; }
+
+		[Option('l', "minlevel", Required = false, Default = false)]
+		public int MinLevel { get; set; }
+		[Option('s', "minstars", Required = false, Default = false)]
+		public int MinStars { get; set; }
 	}
 }

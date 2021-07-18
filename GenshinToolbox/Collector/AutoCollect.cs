@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using WindowsInput.Native;
 using static GenshinToolbox.NativeMethods;
@@ -7,7 +8,8 @@ namespace GenshinToolbox.Collector
 {
 	class AutoCollector
 	{
-		public const int MinFrames = 5 * 16;
+		public static readonly int Frame = (int)Math.Ceiling(1000 / 60f);
+		public static int Leeway = 0;
 
 		private static readonly POINT[] Expeditions = {
 			// Mondstad
@@ -19,8 +21,8 @@ namespace GenshinToolbox.Collector
 			new(1060,340), // 1 - Ores
 			new(1120,450), // 2 - Steak
 			new(1180,660), // 3 - Ores
-			new(-1,-1), // 4 - Mora
-			new(-1,-1), // 5 - Carrot
+			new(565,405), // 4 - Mora
+			new(745,535), // 5 - Carrot
 			// Liyue
 			//     (0)
 			//          (1)
@@ -53,24 +55,74 @@ namespace GenshinToolbox.Collector
 		private static readonly POINT MondstadtButton = new(90, 165);
 		private static readonly POINT LiyueButton = new(90, 235);
 
-		//private static readonly POINT ClaimRewardsArea = new(1400, 400); // somewhere top right
 		private static readonly POINT ClaimRewardsArea = new(606, 757); // somewhere bot left | same pos as decline button
-
-		private static readonly POINT ClaimButton = new(1740, 1025);
+		private static readonly POINT ClaimButton = new(1740, 1025); // Or 'Send' button
 		private static readonly POINT Pick20hLength = new(1800, 690);
 
 		private static readonly POINT CharactersListOffset = new(50, 120);
 		private static readonly POINT CharactersBoxSize = new(860, 125);
 
-		public static void AutoCollect()
+		// Notes:
+		// Clicking Dialague away with 'Esc' takes about 6 frames
+		const int TimingCancelDialogueEsc = 12;
+		const int TimingClickPre = 2;
+		const int TimingClickExpPost = 2;
+		const int TimingClickClaimPost = 5;
+
+
+		public static void AutoCollect(int? slowdown = null, int? warmup = null)
 		{
+			warmup ??= slowdown;
+
 			Util.Focus();
 
-			Thread.Sleep(300);
-			ClickTimed(MondstadtButton);
-			Thread.Sleep(100);
 
+			//PreciseSleep(1000);
+			//Console.WriteLine("Go");
+
+			//for (int i = 0; i < 50; i++)
+			//{
+			//	SetRelativeCursorPos(new POINT { Left = 50 + 10 * (i + i % 2), Top = 50 + 10 * (i + (i + 1) % 2) });
+			//	PreciseSleep(2 * Frame);
+			//}
+
+			//return;
+
+			//for (var i = 2; i >= 0; i -= 1)
+			//{
+			//	Console.WriteLine("Frames: {0}", i);
+			//	for (int ex = 0; ex < 3; ex++)
+			//	{
+			//		SetRelativeCursorPos(ClaimRewardsArea);
+
+			//		PreciseSleep(300);
+
+			//		ClickExpedition((Expedition)ex);
+			//		ClickClaimOrSend();
+			//		CancelDialogueEsc();
+
+			//		SetRelativeCursorPos(ClaimRewardsArea);
+			//	}
+			//}
+
+			//ClickTimed(ClaimButton);
+			//PreciseSleep(Frame);
+			//PressKey(VirtualKeyCode.ESCAPE);
+			//PreciseSleep(Frame);
+			//SetRelativeCursorPos(LiyueButton);
+			//while (true)
+			//{
+			//	PreciseSleep(Frame);
+			//	Util.inp.Mouse.LeftButtonClick();
+			//}
+
+			PreciseSleep(300);
+			ClickTimed(MondstadtButton);
+			PreciseSleep(100);
+
+			Leeway = warmup ?? 5;
 			CollectExpedition(Expedition.M_Flower);
+			Leeway = slowdown ?? 0;
 			CollectExpedition(Expedition.M_Ores1);
 			CollectExpedition(Expedition.M_Steak);
 			CollectExpedition(Expedition.M_Ores2);
@@ -80,9 +132,9 @@ namespace GenshinToolbox.Collector
 			DispatchExpedition(Expedition.M_Flower, 3);
 			DispatchExpedition(Expedition.M_Steak, 4);
 
-			Thread.Sleep(300);
+			PreciseSleep(300);
 			ClickTimed(LiyueButton);
-			Thread.Sleep(100);
+			PreciseSleep(100);
 
 			CollectExpedition(Expedition.L_Ores);
 			DispatchExpedition(Expedition.L_Ores, 0);
@@ -90,41 +142,66 @@ namespace GenshinToolbox.Collector
 
 		static void CollectExpedition(Expedition ex)
 		{
-			ClickTimed(Expeditions[(int)ex]);
-			ClickTimed(ClaimButton);
-			PressTimed(VirtualKeyCode.ESCAPE);
-			Thread.Sleep(100);
+			ClickExpedition(ex);
+			ClickClaimOrSend();
+			CancelDialogueEsc();
 		}
 
 		static void DispatchExpedition(Expedition ex, int character)
 		{
-			ClickTimed(Expeditions[(int)ex]);
-			ClickTimed(Pick20hLength);
-			ClickTimed(ClaimButton);
-			ClickTimed(new(
+			ClickExpedition(ex);
+			ClickTimed(Pick20hLength); // TODO
+			ClickClaimOrSend();
+			ClickTimed(new( // TODO
 				CharactersListOffset.Left + CharactersBoxSize.Left / 2,
 				CharactersListOffset.Top + CharactersBoxSize.Top / 2 + CharactersBoxSize.Top * character
 				));
 			// Sanity click, when we try to dispatch a already running expedition
 			// at this point the 'Are you sure to cancel' dialogue will be up
 			// so we close it in case.
-			ClickTimed(ClaimRewardsArea);
+			CancelDialogueClick();
 		}
+
+		static void ClickExpedition(Expedition ex)
+		{
+			SetRelativeCursorPos(Expeditions[(int)ex]);
+			PreciseSleep((TimingClickPre + Leeway) * Frame);
+			Util.inp.Mouse.LeftButtonClick();
+			PreciseSleep((TimingClickExpPost + Leeway) * Frame);
+		}
+
+		static void ClickClaimOrSend()
+		{
+			SetRelativeCursorPos(ClaimButton);
+			PreciseSleep((TimingClickPre + Leeway) * Frame);
+			Util.inp.Mouse.LeftButtonClick();
+			PreciseSleep((TimingClickClaimPost + Leeway) * Frame);
+		}
+
+		static void CancelDialogueEsc()
+		{
+			PressKey(VirtualKeyCode.ESCAPE);
+			PreciseSleep((TimingCancelDialogueEsc + Leeway) * Frame);
+		}
+
+		static void CancelDialogueClick() // Also doubles as click cancel so we have to wait at least dialogue time
+		{
+			SetRelativeCursorPos(ClaimRewardsArea);
+			PreciseSleep((TimingClickPre + Leeway) * Frame);
+			Util.inp.Mouse.LeftButtonClick();
+			PreciseSleep((TimingCancelDialogueEsc + Leeway) * Frame);
+		}
+
 
 		public static void ClickTimed(POINT p)
 		{
 			SetRelativeCursorPos(p);
-			Thread.Sleep(MinFrames);
-			//Util.inp.Mouse.LeftButtonDown();
-			//Thread.Sleep(MinFrames);
-			//Util.inp.Mouse.LeftButtonUp();
-			//Thread.Sleep(MinFrames);
-			if (!Util.GenshinHasFocus()) Environment.Exit(0);
+			PreciseSleep(5 * Frame);
 			Util.inp.Mouse.LeftButtonClick();
-			Thread.Sleep(MinFrames);
+			PreciseSleep(5 * Frame);
 		}
 
-		public static void PressTimed(VirtualKeyCode key)
+		public static void PressKey(VirtualKeyCode key)
 		{
 			if (!Util.GenshinHasFocus()) Environment.Exit(0);
 			Util.inp.Keyboard.KeyPress(key);
@@ -134,6 +211,20 @@ namespace GenshinToolbox.Collector
 		{
 			var realPos = Util.WindowOffset + p;
 			SetCursorPosPlus(realPos.Left, realPos.Top);
+		}
+
+		private static void PreciseSleep(int ms)
+		{
+			var sw = Stopwatch.StartNew();
+			if (ms > 20)
+			{
+				Thread.Sleep(ms - 20);
+			}
+			while (sw.ElapsedMilliseconds < ms)
+			{
+				Thread.SpinWait(10_000);
+			}
+			if (!Util.GenshinHasFocus()) { Console.Read(); Environment.Exit(0); }
 		}
 	}
 }

@@ -2,7 +2,7 @@
   "profiles": {
     "GenshinToolbox": {
       "commandName": "Project",
-      "commandLineArgs": "-p"
+      "commandLineArgs": "artifacts -a -l 1 -s 5"
     }
   }
 }
