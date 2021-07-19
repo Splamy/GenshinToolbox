@@ -10,6 +10,8 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -161,17 +163,7 @@ namespace GenshinToolbox.ArtScraper
 				if (index >= opts.Max)
 					break;
 
-				if (!Util.GenshinHasFocus())
-				{
-					Console.WriteLine("Waiting for focus");
-
-					while (!Util.GenshinHasFocus())
-					{
-						Thread.Sleep(100);
-					}
-
-					Console.WriteLine("Resuming scan");
-				}
+				Util.WaitForFocus();
 
 				if (hasMoved)
 				{
@@ -254,7 +246,16 @@ namespace GenshinToolbox.ArtScraper
 				(ocr) => { }
 			);
 
-			var genshOptDict = artList.Select((x, i) => { x.FileName = $"artifact_{i}"; return x; }).ToDictionary(x => x.FileName);
+			var collisionList = new Dictionary<string, int>();
+			var genshOptDict = artList.Select(x =>
+			{
+				var id = GetHashString($"{x.Main}{string.Join(",", x.SubStats)}{x.Slot}{x.Stars}{x.Level}");
+				var cnt = collisionList.GetValueOrDefault(id, 0);
+				collisionList[id] = cnt + 1;
+
+				x.FileName = $"artifact_{id}_{cnt}";
+				return x;
+			}).ToDictionary(x => x.FileName);
 			var text = JsonSerializer.Serialize(genshOptDict, new JsonSerializerOptions
 			{
 				WriteIndented = true,
@@ -593,7 +594,20 @@ namespace GenshinToolbox.ArtScraper
 			}
 		}
 
+		public static byte[] GetHash(string inputString)
+		{
+			using var algorithm = MD5.Create();
+			return algorithm.ComputeHash(Encoding.UTF8.GetBytes(inputString));
+		}
 
+		public static string GetHashString(string inputString)
+		{
+			StringBuilder sb = new StringBuilder();
+			foreach (byte b in GetHash(inputString))
+				sb.Append(b.ToString("X2"));
+
+			return sb.ToString();
+		}
 	}
 
 	class GenshinOptimizerConverter : JsonConverter<ArtData>

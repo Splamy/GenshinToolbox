@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using WindowsInput;
@@ -44,5 +45,21 @@ namespace GenshinToolbox
 
 		public static bool GenshinHasFocus()
 			=> GetForegroundWindow() == GetProcess()?.MainWindowHandle;
+
+		public static void WaitForFocus()
+		{
+			if (!Util.GenshinHasFocus())
+			{
+				Console.WriteLine("Waiting for focus");
+
+				while (!Util.GenshinHasFocus())
+				{
+					Thread.Sleep(100);
+				}
+
+				Console.WriteLine("Resuming task in 500ms");
+				Thread.Sleep(500);
+			}
+		}
 	}
 }

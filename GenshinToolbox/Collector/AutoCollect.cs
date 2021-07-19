@@ -203,7 +203,7 @@ namespace GenshinToolbox.Collector
 
 		public static void PressKey(VirtualKeyCode key)
 		{
-			if (!Util.GenshinHasFocus()) Environment.Exit(0);
+			Util.WaitForFocus();
 			Util.inp.Keyboard.KeyPress(key);
 		}
 
@@ -224,7 +224,7 @@ namespace GenshinToolbox.Collector
 			{
 				Thread.SpinWait(10_000);
 			}
-			if (!Util.GenshinHasFocus()) { Console.Read(); Environment.Exit(0); }
+			Util.WaitForFocus();
 		}
 	}
 }
