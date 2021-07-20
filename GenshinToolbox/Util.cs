@@ -10,7 +10,7 @@ namespace GenshinToolbox
 	public static class Util
 	{
 		private static POINT? _WindowOffset = null;
-		private static Process _proc = null;
+		private static Process? _proc = null;
 
 		public static readonly InputSimulator inp = new();
 		public static POINT WindowOffset => GetWindowRect();
@@ -48,11 +48,11 @@ namespace GenshinToolbox
 
 		public static void WaitForFocus()
 		{
-			if (!Util.GenshinHasFocus())
+			if (!GenshinHasFocus())
 			{
 				Console.WriteLine("Waiting for focus");
 
-				while (!Util.GenshinHasFocus())
+				while (!GenshinHasFocus())
 				{
 					Thread.Sleep(100);
 				}

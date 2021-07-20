@@ -115,13 +115,11 @@ namespace GenshinToolbox.ArtScraper
 			{ Slot.Circlet, (new[] { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.CritRate, Stat.CritDmg, Stat.HealingBonusPerc }, SubStats) },
 		};
 
-		const bool DebugImg = false;
-
 		const string Numbers = "0123456789";
 		const string AdditionalCharacter = ".,+%";
 
 		const string CharsNumbers = Numbers + AdditionalCharacter;
-		const string CharsSet = ":"; // TODO set names
+		const string CharsSet = ":";
 
 		const string DbgFolder = "DbgImgs";
 		const string ArtsFolder = "ArtImgs";
@@ -158,6 +156,8 @@ namespace GenshinToolbox.ArtScraper
 			var off = Util.WindowOffset + new POINT(1330, 133);
 			var size = new Size(410, 815);
 
+			var alignZero = new string('0', (int)Math.Floor(Math.Log10(Math.Min(opts.Max, 1000))) + 1);
+
 			while (true)
 			{
 				if (index >= opts.Max)
@@ -170,17 +170,16 @@ namespace GenshinToolbox.ArtScraper
 					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 
-					var cap = CaptureScreen(off, size);
+					using var cap = CaptureScreen(off, size);
 					hasMoved = false;
 					Directory.CreateDirectory(ArtsFolder);
-					var saveFile = Path.Combine(ArtsFolder, $"Art{index}.png");
+					var saveFile = Path.Combine(ArtsFolder, $"Art{index.ToString(alignZero)}.png");
 					File.Delete(saveFile);
 					cap.Save(saveFile, ImageFormat.Png);
 				}
 
 				if (!hasMoved)
 				{
-					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 
 					x360.SetAxisValue(Xbox360Axis.LeftThumbX, short.MaxValue);
@@ -190,7 +189,6 @@ namespace GenshinToolbox.ArtScraper
 					Thread.Sleep(100);
 					x360.SetAxisValue(Xbox360Axis.LeftThumbX, 0);
 
-					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 				}
 			}
@@ -199,11 +197,8 @@ namespace GenshinToolbox.ArtScraper
 		public static Bitmap CaptureScreen(POINT pos, Size size)
 		{
 			var result = new Bitmap(size.Width, size.Height);
-			using (var g = Graphics.FromImage(result))
-			{
-				g.CopyFromScreen(new Point(pos.Left, pos.Top), Point.Empty, size);
-			}
-
+			using var g = Graphics.FromImage(result);
+			g.CopyFromScreen(new Point(pos.Left, pos.Top), Point.Empty, size);
 			return result;
 		}
 
@@ -224,7 +219,7 @@ namespace GenshinToolbox.ArtScraper
 
 		private static void AnalyzeAll(ArtifactsOptions opts)
 		{
-			if (DebugImg)
+			if (opts.Debug)
 				Directory.CreateDirectory(DbgFolder);
 
 			//Analyze(opts, GetOcrInstance(), Path.Combine(ArtsFolder, $"Art{13}.png"));
@@ -233,8 +228,9 @@ namespace GenshinToolbox.ArtScraper
 			var artList = new ConcurrentBag<ArtData>();
 
 			//foreach (var file in Directory.EnumerateFiles(ArtsFolder).Take(opts.Max))
+			var files = Directory.EnumerateFiles(ArtsFolder).Take(opts.Max).ToArray();
 			Parallel.ForEach(
-				Directory.EnumerateFiles(ArtsFolder).Take(opts.Max),
+				files,
 				() => GetOcrInstance(),
 				(file, state, ocr) =>
 				{
@@ -253,9 +249,9 @@ namespace GenshinToolbox.ArtScraper
 				var cnt = collisionList.GetValueOrDefault(id, 0);
 				collisionList[id] = cnt + 1;
 
-				x.FileName = $"artifact_{id}_{cnt}";
+				x.Id = $"artifact_{id}_{cnt}";
 				return x;
-			}).ToDictionary(x => x.FileName);
+			}).ToDictionary(x => x.Id);
 			var text = JsonSerializer.Serialize(genshOptDict, new JsonSerializerOptions
 			{
 				WriteIndented = true,
@@ -274,31 +270,29 @@ namespace GenshinToolbox.ArtScraper
 		private static IronTesseract GetOcrInstance()
 		{
 			var ocr = new IronTesseract();
-			ocr.Language = OcrLanguage.English;
 			ocr.Configuration.ReadBarCodes = false;
 			ocr.Configuration.RenderSearchablePdfsAndHocr = false;
+			ocr.Language = OcrLanguage.English;
 			return ocr;
 		}
 
-		private static ArtData Analyze(ArtifactsOptions opts, IronTesseract Ocr, string file)
+		private static ArtData? Analyze(ArtifactsOptions opts, IronTesseract Ocr, string file)
 		{
 			var img = new Bitmap(file);
 
 			T ProcessStat<T>(string dbgName, Rectangle area, Action<Bitmap, Graphics>? postprocess, Func<string, T> filter)
 			{
-				var crop = CropOut(img, area, postprocess);
-				if (DebugImg) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
-				using (var Input = new OcrInput(crop))
-				{
-					var Result = Ocr.Read(Input);
-					var text = Result.Text;
-					var guess = filter(text);
-					Console.WriteLine("For {0}: got '{1}', reading {2}", dbgName, text, guess);
-					return guess;
-				}
+				using var crop = CropOut(img, area, postprocess);
+				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
+				using var Input = new OcrInput(crop);
+				var Result = Ocr.Read(Input);
+				var text = Result.Text;
+				var guess = filter(text);
+				Console.WriteLine("For {0}: got '{1}', reading {2}", dbgName, text, guess);
+				return guess;
 			}
 
-			var starCrop = CropOut(img, Areas[11]);
+			using var starCrop = CropOut(img, Areas[11]);
 			var stars = 0;
 			for (int i = 0; i < 5; i++)
 			{
@@ -371,7 +365,7 @@ namespace GenshinToolbox.ArtScraper
 				area.X = 20;
 				area.Width = 20;
 				int pxlCount = 0;
-				var crop = CropOut(img, area, (i, g) => i.ForAll(px =>
+				using var crop = CropOut(img, area, (i, g) => i.ForAll(px =>
 				{
 					if (px.R < 128 && px.G < 128 && px.B < 128)
 						pxlCount++;
@@ -473,7 +467,7 @@ namespace GenshinToolbox.ArtScraper
 		public static T FindClosest<T>(this IEnumerable<KeyValuePair<T, string>> kvs, string result)
 		{
 			var bestDist = int.MaxValue;
-			T best = default;
+			T best = default!;
 			foreach (var kvp in kvs)
 			{
 				var dist = Lehvenshtein(kvp.Value, result);
@@ -511,13 +505,9 @@ namespace GenshinToolbox.ArtScraper
 			}
 
 			// Initialize arrays.
-			for (int i = 0; i <= n; d[i, 0] = i++)
-			{
-			}
+			for (int i = 0; i <= n; d[i, 0] = i++) { }
 
-			for (int j = 0; j <= m; d[0, j] = j++)
-			{
-			}
+			for (int j = 0; j <= m; d[0, j] = j++) { }
 
 			// Begin looping.
 			for (int i = 1; i <= n; i++)
@@ -590,7 +580,7 @@ namespace GenshinToolbox.ArtScraper
 				return fnum;
 
 			default:
-				throw new ArgumentOutOfRangeException();
+				throw new ArgumentOutOfRangeException(nameof(stat));
 			}
 		}
 
@@ -602,7 +592,7 @@ namespace GenshinToolbox.ArtScraper
 
 		public static string GetHashString(string inputString)
 		{
-			StringBuilder sb = new StringBuilder();
+			var sb = new StringBuilder();
 			foreach (byte b in GetHash(inputString))
 				sb.Append(b.ToString("X2"));
 
@@ -616,7 +606,7 @@ namespace GenshinToolbox.ArtScraper
 
 		public override void Write(Utf8JsonWriter writer, ArtData val, JsonSerializerOptions options)
 		{
-			string StatToGenshOpt(Stat stat) => stat switch
+			static string StatToGenshOpt(Stat stat) => stat switch
 			{
 				Stat.Atk => "atk",
 				Stat.AtkPerc => "atk_",
@@ -636,11 +626,12 @@ namespace GenshinToolbox.ArtScraper
 				Stat.GeoDmgBonus => "geo_dmg_",
 				Stat.PhysicalDmgBonus => "physical_dmg_",
 				Stat.HealingBonusPerc => "heal_",
-				_ => throw new ArgumentOutOfRangeException()
+				_ => throw new ArgumentOutOfRangeException(nameof(stat))
 			};
 
 			writer.WriteStartObject();
-			writer.WriteString("id", val.FileName);
+			writer.WriteString("id", val.Id);
+			writer.WriteString("_file", val.FileName);
 			writer.WriteString("setKey", val.ArtSet.ToString());
 			writer.WriteNumber("numStars", val.Stars);
 			writer.WriteString("slotKey", val.Slot.ToString().ToLowerInvariant());
@@ -663,9 +654,12 @@ namespace GenshinToolbox.ArtScraper
 		}
 	}
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 	class ArtData
 	{
 		public string FileName { get; set; }
+		public string Id { get; set; }
+
 		public Slot Slot { get; set; }
 
 		public int Stars { get; set; }
@@ -676,6 +670,7 @@ namespace GenshinToolbox.ArtScraper
 		public StatGroup Main { get; set; }
 		public List<StatGroup> SubStats { get; set; }
 	}
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 	record StatGroup(Stat Type, float Value, string Raw)
 	{

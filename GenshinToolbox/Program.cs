@@ -50,7 +50,10 @@ namespace GenshinToolbox
 	[Verb("artifacts", HelpText = "")]
 	class ArtifactsOptions
 	{
-		[Option('m', "maxcount", Required = false, Default = int.MaxValue)]
+		[Option('d', "debug", Required = false, Default = false)]
+		public bool Debug { get; set; }
+
+		[Option('m', "max", Required = false, Default = int.MaxValue)]
 		public int Max { get; set; }
 		[Option('c', "capture", Required = false, Default = false)]
 		public bool Capture { get; set; }

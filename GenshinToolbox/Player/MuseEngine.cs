@@ -344,7 +344,7 @@ namespace GenshinToolbox.Player
 										var strDump = string.Join("\n", merged.Accords);
 
 										var dumpFile = $"./{prefix}{song.Name}.txt";
-										Directory.CreateDirectory(Path.GetDirectoryName(dumpFile));
+										Directory.CreateDirectory(Path.GetDirectoryName(dumpFile)!);
 										File.WriteAllText(dumpFile, strDump);
 									}
 									break;

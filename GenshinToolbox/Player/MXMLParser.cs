@@ -20,7 +20,7 @@ namespace GenshinToolbox.Player
 			// - repeats are not added when a new voice gets added in mid
 			// - autoadjust xml measure length to norm
 
-			using var fs = File.OpenRead(file);
+			using var fs = File.OpenRead(file!);
 			using var ds = new ZipArchive(fs, ZipArchiveMode.Read);
 			using var scoreFile = ds.Entries.First(e => !e.FullName.Contains('/') && e.Name.EndsWith(".xml")).Open();
 			using var sr = new StreamReader(scoreFile);
@@ -29,16 +29,16 @@ namespace GenshinToolbox.Player
 
 			var voices = new Dictionary<string, VoiceEdit>();
 
-			var partList = xml.Root.Element("part-list");
+			var partList = xml.Root!.Element("part-list")!;
 			var pickInstrumentsIds = new HashSet<string>();
 			if (conf.PickInstruments.Count > 0)
 			{
 				foreach (var scorePart in partList.Elements().Where(c => c.Name.LocalName == "score-part"))
 				{
-					var id = scorePart.Attribute("id").Value;
+					var id = scorePart.Attribute("id")!.Value;
 					if (conf.PickInstruments.Overlaps(new[] {
-						scorePart.Element("part-name")?.Value,
-						scorePart.Element("part-abbreviation")?.Value,
+						scorePart.Element("part-name")?.Value!,
+						scorePart.Element("part-abbreviation")?.Value!,
 					}))
 					{
 						pickInstrumentsIds.Add(id);
@@ -48,7 +48,7 @@ namespace GenshinToolbox.Player
 
 			foreach (var part in xml.Root.Elements().Where(c => c.Name.LocalName == "part"))
 			{
-				var partId = part.Attribute("id").Value;
+				var partId = part.Attribute("id")!.Value;
 				if (pickInstrumentsIds.Count > 0 && !pickInstrumentsIds.Contains(partId))
 					continue;
 
@@ -56,7 +56,7 @@ namespace GenshinToolbox.Player
 				var ties = new HashSet<string>();
 				foreach (var measure in part.Elements().Where(c => c.Name.LocalName == "measure"))
 				{
-					var measure_num = int.Parse(measure.Attribute("number").Value);
+					var measure_num = int.Parse(measure.Attribute("number")!.Value);
 					if (measure_num < conf.MeasureStart || measure_num >= conf.MeasureEnd) continue;
 
 					var currentLen = voicesInCurrentPart.Select(ve => ve.Length).FirstOrDefault();
@@ -96,8 +96,8 @@ namespace GenshinToolbox.Player
 
 								var pitchData = playElem.Element("pitch");
 								if (pitchData is null) continue;
-								var scale = Enum.Parse<Scale>(pitchData.Element("step").Value, true);
-								var oct = int.Parse(pitchData.Element("octave").Value);
+								var scale = Enum.Parse<Scale>(pitchData.Element("step")!.Value, true);
+								var oct = int.Parse(pitchData.Element("octave")!.Value);
 								var alter = int.Parse(pitchData.Element("alter")?.Value ?? "0");
 
 								var note = new Note(scale, oct);
@@ -313,9 +313,9 @@ namespace GenshinToolbox.Player
 
 	public class MXMlConf
 	{
-		public string Path { get; init; }
-		public string Link { get; init; }
-		public string Name { get; set; }
+		public string? Path { get; init; }
+		public string? Link { get; init; }
+		public string? Name { get; set; }
 		public float? Speed { get; set; } = null;
 		public TimeSpan? TargetLength { get; set; } = null;
 		public bool HonorRepeats { get; set; } = false;

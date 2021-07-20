@@ -2,7 +2,7 @@
   "profiles": {
     "GenshinToolbox": {
       "commandName": "Project",
-      "commandLineArgs": "artifacts -a -l 1 -s 5"
+      "commandLineArgs": "artifacts --max 626 --analyze --minlevel 0 --minstars 5"
     }
   }
 }
