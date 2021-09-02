@@ -15,6 +15,8 @@ namespace GenshinToolbox
 	{
 		public static readonly int Frame = (int)Math.Ceiling(1000 / 60f);
 
+		private static readonly Point MinimizedLoc = new Point(-32000, -32000);
+
 		private static Point? _WindowOffset = null;
 		private static Process? _proc = null;
 
@@ -40,12 +42,13 @@ namespace GenshinToolbox
 
 		private static Point GetWindowRect()
 		{
-			if (!_WindowOffset.HasValue)
-			{
-				var proc = GetProcess();
-				_WindowOffset = ClientToScreen(proc.MainWindowHandle);
-			}
-			return _WindowOffset.Value;
+			if (_WindowOffset is { } off && off != MinimizedLoc)
+				return _WindowOffset.Value;
+
+			var proc = GetProcess();
+			off = ClientToScreen(proc.MainWindowHandle);
+			_WindowOffset = off;
+			return off;
 		}
 
 		public static bool GenshinHasFocus()

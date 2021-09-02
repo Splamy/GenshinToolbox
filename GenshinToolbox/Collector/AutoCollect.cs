@@ -5,7 +5,7 @@ using static GenshinToolbox.Util;
 
 namespace GenshinToolbox.Collector
 {
-	class AutoCollector
+	static class AutoCollector
 	{
 		public static readonly int Frame = (int)Math.Ceiling(1000 / 60f);
 		public static int Leeway = 0;

@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using GenshinToolbox.ArtScraper;
 using GenshinToolbox.Collector;
+using GenshinToolbox.Fisher;
 using GenshinToolbox.Player;
 using System;
 using System.Globalization;
@@ -20,7 +21,7 @@ namespace GenshinToolbox
 			MuseEngine.Validate();
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions>(args).MapResult(
+			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions, FisherOptions>(args).MapResult(
 				(PlayerOptions o) =>
 				{
 					var museEngine = new MuseEngine();
@@ -35,6 +36,11 @@ namespace GenshinToolbox
 				(ArtifactsOptions o) =>
 				{
 					Scraper.Run(o);
+					return 0;
+				},
+				(FisherOptions o) =>
+				{
+					AutoFisher.Run(o);
 					return 0;
 				},
 				errs => 1);
@@ -74,5 +80,10 @@ namespace GenshinToolbox
 		public int MinLevel { get; set; }
 		[Option('s', "minstars", Required = false, Default = 0)]
 		public int MinStars { get; set; }
+	}
+
+	[Verb("fisher", HelpText = "")]
+	class FisherOptions
+	{
 	}
 }

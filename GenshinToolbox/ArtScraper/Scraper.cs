@@ -264,15 +264,7 @@ namespace GenshinToolbox.ArtScraper
 			var cmax = Color.FromArgb(80, 89, 107);
 
 			var open = Capture.Game(MenuOpenScanRect);
-			for (var x = 0; x < open.Width; x++)
-				for (var y = 0; y < open.Height; y++)
-				{
-					var px = open.GetPixel(x, y);
-					if (px.R < cmin.R || px.G < cmin.G || px.B < cmin.B ||
-						px.R > cmax.R || px.G > cmax.G || px.B > cmax.B)
-						return false;
-				}
-			return true;
+			return open.MatchesAll(px => px.RgbIn(cmin, cmax));
 		}
 
 		// *****************************
