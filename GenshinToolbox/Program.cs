@@ -3,6 +3,8 @@ using GenshinToolbox.ArtScraper;
 using GenshinToolbox.Collector;
 using GenshinToolbox.Player;
 using System;
+using System.Globalization;
+using System.Threading;
 
 namespace GenshinToolbox
 {
@@ -10,6 +12,11 @@ namespace GenshinToolbox
 	{
 		static void Main(string[] args)
 		{
+			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+			CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+
 			MuseEngine.Validate();
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -39,6 +46,7 @@ namespace GenshinToolbox
 	class PlayerOptions
 	{
 	}
+
 	[Verb("collect", HelpText = "")]
 	class CollectOptions
 	{
@@ -47,6 +55,7 @@ namespace GenshinToolbox
 		[Option('s', "slowdown", Required = false)]
 		public int? CollectSlowdown { get; set; }
 	}
+
 	[Verb("artifacts", HelpText = "")]
 	class ArtifactsOptions
 	{
@@ -61,9 +70,9 @@ namespace GenshinToolbox
 		[Option('a', "analyze", Required = false, Default = false)]
 		public bool Analyze { get; set; }
 
-		[Option('l', "minlevel", Required = false, Default = false)]
+		[Option('l', "minlevel", Required = false, Default = 0)]
 		public int MinLevel { get; set; }
-		[Option('s', "minstars", Required = false, Default = false)]
+		[Option('s', "minstars", Required = false, Default = 0)]
 		public int MinStars { get; set; }
 	}
 }

@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
+using System.Drawing;
 using WindowsInput.Native;
-using static GenshinToolbox.NativeMethods;
+using static GenshinToolbox.Util;
 
 namespace GenshinToolbox.Collector
 {
@@ -11,7 +10,7 @@ namespace GenshinToolbox.Collector
 		public static readonly int Frame = (int)Math.Ceiling(1000 / 60f);
 		public static int Leeway = 0;
 
-		private static readonly POINT[] Expeditions = {
+		private static readonly Point[] Expeditions = {
 			// Mondstad
 			//        (0)
 			//   (4)       (1)
@@ -52,15 +51,15 @@ namespace GenshinToolbox.Collector
 			L_Lotus2 = 11,
 		}
 
-		private static readonly POINT MondstadtButton = new(90, 165);
-		private static readonly POINT LiyueButton = new(90, 235);
+		private static readonly Point MondstadtButton = new(90, 165);
+		private static readonly Point LiyueButton = new(90, 235);
 
-		private static readonly POINT ClaimRewardsArea = new(606, 757); // somewhere bot left | same pos as decline button
-		private static readonly POINT ClaimButton = new(1740, 1025); // Or 'Send' button
-		private static readonly POINT Pick20hLength = new(1800, 690);
+		private static readonly Point ClaimRewardsArea = new(606, 757); // somewhere bot left | same pos as decline button
+		private static readonly Point ClaimButton = new(1740, 1025); // Or 'Send' button
+		private static readonly Point Pick20hLength = new(1800, 690);
 
-		private static readonly POINT CharactersListOffset = new(50, 120);
-		private static readonly POINT CharactersBoxSize = new(860, 125);
+		private static readonly Point CharactersListOffset = new(50, 120);
+		private static readonly Point CharactersBoxSize = new(860, 125);
 
 		// Notes:
 		// Clicking Dialague away with 'Esc' takes about 6 frames
@@ -153,8 +152,8 @@ namespace GenshinToolbox.Collector
 			ClickTimed(Pick20hLength); // TODO
 			ClickClaimOrSend();
 			ClickTimed(new( // TODO
-				CharactersListOffset.Left + CharactersBoxSize.Left / 2,
-				CharactersListOffset.Top + CharactersBoxSize.Top / 2 + CharactersBoxSize.Top * character
+				CharactersListOffset.X + CharactersBoxSize.X / 2,
+				CharactersListOffset.Y + CharactersBoxSize.Y / 2 + CharactersBoxSize.Y * character
 				));
 			// Sanity click, when we try to dispatch a already running expedition
 			// at this point the 'Are you sure to cancel' dialogue will be up
@@ -184,7 +183,8 @@ namespace GenshinToolbox.Collector
 			PreciseSleep((TimingCancelDialogueEsc + Leeway) * Frame);
 		}
 
-		static void CancelDialogueClick() // Also doubles as click cancel so we have to wait at least dialogue time
+		// Also doubles as click cancel so we have to wait at least dialogue time
+		static void CancelDialogueClick()
 		{
 			SetRelativeCursorPos(ClaimRewardsArea);
 			PreciseSleep((TimingClickPre + Leeway) * Frame);
@@ -193,38 +193,5 @@ namespace GenshinToolbox.Collector
 		}
 
 
-		public static void ClickTimed(POINT p)
-		{
-			SetRelativeCursorPos(p);
-			PreciseSleep(5 * Frame);
-			Util.inp.Mouse.LeftButtonClick();
-			PreciseSleep(5 * Frame);
-		}
-
-		public static void PressKey(VirtualKeyCode key)
-		{
-			Util.WaitForFocus();
-			Util.inp.Keyboard.KeyPress(key);
-		}
-
-		public static void SetRelativeCursorPos(POINT p)
-		{
-			var realPos = Util.WindowOffset + p;
-			SetCursorPosPlus(realPos.Left, realPos.Top);
-		}
-
-		private static void PreciseSleep(int ms)
-		{
-			var sw = Stopwatch.StartNew();
-			if (ms > 20)
-			{
-				Thread.Sleep(ms - 20);
-			}
-			while (sw.ElapsedMilliseconds < ms)
-			{
-				Thread.SpinWait(10_000);
-			}
-			Util.WaitForFocus();
-		}
 	}
 }

@@ -1,11 +1,11 @@
 ﻿using IronOcr;
 using Nefarius.ViGEm.Client;
+using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using WindowsInput.Native;
 
 namespace GenshinToolbox.ArtScraper
 {
@@ -126,35 +127,164 @@ namespace GenshinToolbox.ArtScraper
 
 		public static void Run(ArtifactsOptions opts)
 		{
-			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-			CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
-
-			if (opts.Capture)
-			{
-				Capture(opts);
-			}
-
-			if (opts.Analyze)
-			{
-				AnalyzeAll(opts);
-			}
-		}
-
-		private static void Capture(ArtifactsOptions opts)
-		{
 			using var c = new ViGEmClient();
 			var x360 = c.CreateXbox360Controller();
 			x360.Connect();
 
+			while (true)
+			{
+				Console.Clear();
+				Console.WriteLine("1. Scan all artifacts (make sure game is in controller mode)");
+				Console.WriteLine("2. Analyze all artifacts");
+				Console.WriteLine("3. Switch game to controller input");
+				Console.WriteLine("4. Switch game to kdb+mouse input");
+				Console.WriteLine("5. Navigate to artifacts (make sure game is in controller mode)");
+
+				switch (Console.ReadKey().KeyChar)
+				{
+				case '1':
+					CaptureArts(opts, x360);
+					break;
+				case '2':
+					Console.Write("Min level (Default: >=0):");
+					if (!int.TryParse(Console.ReadLine()!.Trim(), out var minLevel))
+						minLevel = 0;
+					Console.Write("Min stars (Default: >=5):");
+					if (!int.TryParse(Console.ReadLine()!.Trim(), out var minStars))
+						minStars = 5;
+
+					opts.MinLevel = minLevel;
+					opts.MinStars = minStars;
+					AnalyzeAll(opts);
+					break;
+				case '3':
+					SwitchToController();
+					break;
+				case '4':
+					SwitchToKbdMouse(x360);
+					break;
+				case '5':
+					Console.WriteLine("Not implemented");
+					Thread.Sleep(2000);
+					break;
+				}
+
+			}
+		}
+
+		// Kbd / Controller switching utils
+
+		const int Timing = 1000;
+
+		private static void SwitchToController()
+		{
 			Util.Focus();
+
+			for (int i = 0; i < 5; i++)
+			{
+				Util.PressKey(VirtualKeyCode.ESCAPE);
+				Thread.Sleep(Timing);
+			}
+
+			if (!IsMenuOpen())
+			{
+				Console.WriteLine("Opening menu");
+				Util.PressKey(VirtualKeyCode.ESCAPE);
+				Thread.Sleep(Timing);
+			}
+			else
+			{
+				Console.WriteLine("Menu is open");
+			}
+
+			Util.ClickTimed(new Point(50, 820));
+			Thread.Sleep(Timing);
+
+			Util.ClickTimed(new Point(1630, 215));
+			Thread.Sleep(Timing);
+
+			Util.ClickTimed(new Point(1630, 315));
+			Thread.Sleep(Timing);
+		}
+
+		private static void EnterMenuWithController(IXbox360Controller x360)
+		{
+			Util.Focus();
+
+			for (int i = 0; i < 5; i++)
+			{
+				x360.PressButton(Xbox360Button.A);
+				Thread.Sleep(Timing);
+			}
+
+			//TODO 
+		}
+
+		private static void SwitchToKbdMouse(IXbox360Controller x360)
+		{
+			Util.Focus();
+
+			for (int i = 0; i < 5; i++)
+			{
+				x360.PressButton(Xbox360Button.A);
+				Thread.Sleep(Timing);
+			}
+
+			x360.PressButton(Xbox360Button.Start);
+			Thread.Sleep(Timing);
+
+			x360.TapAxis(AxisDir.Left);
+			Thread.Sleep(Timing);
+
+			for (int i = 0; i < 4; i++)
+			{
+				x360.TapAxis(AxisDir.Down);
+				Thread.Sleep(Timing);
+			}
+
+			x360.PressButton(Xbox360Button.B);
+			Thread.Sleep(Timing);
+
+			x360.TapAxis(AxisDir.Right);
+			Thread.Sleep(Timing);
+
+			x360.PressButton(Xbox360Button.B);
+			Thread.Sleep(Timing);
+
+			x360.TapAxis(AxisDir.Up);
+			Thread.Sleep(Timing);
+
+			x360.PressButton(Xbox360Button.B);
+			Thread.Sleep(Timing);
+		}
+
+		private static bool IsMenuOpen()
+		{
+			var cmin = Color.FromArgb(73, 83, 102);
+			var cmax = Color.FromArgb(80, 89, 107);
+
+			var open = Capture.Game(MenuOpenScanRect);
+			for (var x = 0; x < open.Width; x++)
+				for (var y = 0; y < open.Height; y++)
+				{
+					var px = open.GetPixel(x, y);
+					if (px.R < cmin.R || px.G < cmin.G || px.B < cmin.B ||
+						px.R > cmax.R || px.G > cmax.G || px.B > cmax.B)
+						return false;
+				}
+			return true;
+		}
+
+		// *****************************
+
+		private static void CaptureArts(ArtifactsOptions opts, IXbox360Controller x360)
+		{
+			Util.Focus();
+
+			//EnterMenuWithController(x360);
 
 			int index = 0;
 			bool hasMoved = true;
-
-			var off = Util.WindowOffset + new POINT(1330, 133);
-			var size = new Size(410, 815);
 
 			var alignZero = new string('0', (int)Math.Floor(Math.Log10(Math.Min(opts.Max, 1000))) + 1);
 
@@ -170,7 +300,7 @@ namespace GenshinToolbox.ArtScraper
 					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 
-					using var cap = CaptureScreen(off, size);
+					using var cap = Capture.Game(ArtifactScanRect);
 					hasMoved = false;
 					Directory.CreateDirectory(ArtsFolder);
 					var saveFile = Path.Combine(ArtsFolder, $"Art{index.ToString(alignZero)}.png");
@@ -194,14 +324,8 @@ namespace GenshinToolbox.ArtScraper
 			}
 		}
 
-		public static Bitmap CaptureScreen(POINT pos, Size size)
-		{
-			var result = new Bitmap(size.Width, size.Height);
-			using var g = Graphics.FromImage(result);
-			g.CopyFromScreen(new Point(pos.Left, pos.Top), Point.Empty, size);
-			return result;
-		}
-
+		static readonly Rectangle MenuOpenScanRect = new(140, 380, 5, 20);
+		static readonly Rectangle ArtifactScanRect = new(1330, 133, 410, 815);
 		private static readonly Rectangle[] Areas = new Rectangle[] {
 			new(20, 5, 365, 35), // Name
 			new(20, 56, 217, 25), // SubName
@@ -278,11 +402,11 @@ namespace GenshinToolbox.ArtScraper
 
 		private static ArtData? Analyze(ArtifactsOptions opts, IronTesseract Ocr, string file)
 		{
-			var img = new Bitmap(file);
+			using var img = new Bitmap(file);
 
 			T ProcessStat<T>(string dbgName, Rectangle area, Action<Bitmap, Graphics>? postprocess, Func<string, T> filter)
 			{
-				using var crop = CropOut(img, area, postprocess);
+				using var crop = img.CropOut(area, postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
 				using var Input = new OcrInput(crop);
 				var Result = Ocr.Read(Input);
@@ -292,7 +416,7 @@ namespace GenshinToolbox.ArtScraper
 				return guess;
 			}
 
-			using var starCrop = CropOut(img, Areas[11]);
+			using var starCrop = img.CropOut(Areas[11]);
 			var stars = 0;
 			for (int i = 0; i < 5; i++)
 			{
@@ -310,18 +434,13 @@ namespace GenshinToolbox.ArtScraper
 			if (stars < opts.MinStars)
 				return null;
 
-			var WhiteFilter = new Action<Bitmap, Graphics>((i, g) => { i.ForAll(px => px.R + px.G + px.B > 180 * 3 ? Color.Black : Color.White); });
-			var GrayFilter = new Action<Bitmap, Graphics>((i, g) => { i.ForAll(px => px.R + px.G + px.B > 128 * 3 ? Color.Black : Color.White); });
-			var BlackFilter = new Action<Bitmap, Graphics>((i, g) => { i.ForAll(px => px.R + px.G + px.B < 128 * 3 ? Color.Black : Color.White); });
-			var GreenFilter = new Action<Bitmap, Graphics>((i, g) => { i.ForAll(px => px.G > 128 && px.R + px.B < 128 * 2 ? Color.Black : Color.White); });
-
 			Ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
 
 			Ocr.Configuration.WhiteListCharacters = (Numbers + "+").Allow();
 			var levelNum = ProcessStat(
 				"level",
 				Areas[4],
-				WhiteFilter,
+				ImageExt.WhiteFilter,
 				text => int.TryParse(text, out var num) ? num : -1
 			);
 
@@ -332,7 +451,7 @@ namespace GenshinToolbox.ArtScraper
 			Slot slot = ProcessStat(
 				"subName",
 				Areas[1],
-				WhiteFilter,
+				ImageExt.WhiteFilter,
 				text => SlotNames.FindClosest(text)
 			);
 			var slotData = StatCategory[slot];
@@ -341,7 +460,7 @@ namespace GenshinToolbox.ArtScraper
 			Stat mainStat = ProcessStat(
 				"mainStat",
 				Areas[2],
-				GrayFilter,
+				ImageExt.GrayFilter,
 				text => slotData.main.Select(s => (s, StatNames[s])).FindClosest(text)
 			);
 
@@ -349,7 +468,7 @@ namespace GenshinToolbox.ArtScraper
 			string mainStatValueText = ProcessStat(
 				"mainStatValue",
 				Areas[3],
-				WhiteFilter,
+				ImageExt.WhiteFilter,
 				text => text
 			);
 			mainStat = ModStatWithPercent(mainStat, mainStatValueText, slotData.main);
@@ -365,7 +484,7 @@ namespace GenshinToolbox.ArtScraper
 				area.X = 20;
 				area.Width = 20;
 				int pxlCount = 0;
-				using var crop = CropOut(img, area, (i, g) => i.ForAll(px =>
+				using var crop = img.CropOut(area, (i, g) => i.ForAll(px =>
 				{
 					if (px.R < 128 && px.G < 128 && px.B < 128)
 						pxlCount++;
@@ -379,7 +498,7 @@ namespace GenshinToolbox.ArtScraper
 				var substat = ProcessStat(
 					$"subStat{i}",
 					Areas[6 + i],
-					BlackFilter,
+					ImageExt.BlackFilter,
 					text =>
 					{
 						if (text.Contains("+"))
@@ -413,7 +532,7 @@ namespace GenshinToolbox.ArtScraper
 			var artSet = ProcessStat(
 				"artSet",
 				Areas[10],
-				GreenFilter,
+				ImageExt.GreenFilter,
 				text => SetNames.FindClosest(text.TrimEnd(':'))
 			);
 
@@ -434,32 +553,6 @@ namespace GenshinToolbox.ArtScraper
 				Main = new StatGroup(mainStat, mainStatValue, mainStatValueText),
 				SubStats = subStats,
 			};
-		}
-
-		private static Bitmap CropOut(Bitmap img, Rectangle rect, Action<Bitmap, Graphics>? postprocess = null)
-		{
-			var crop = new Bitmap(rect.Width, rect.Height);
-			using var g = Graphics.FromImage(crop);
-			g.SmoothingMode = SmoothingMode.None;
-			g.PixelOffsetMode = PixelOffsetMode.Default;
-			g.CompositingQuality = CompositingQuality.Default;
-			g.InterpolationMode = InterpolationMode.Default;
-			g.CompositingMode = CompositingMode.SourceCopy;
-			g.DrawImage(img, 0, 0, rect, GraphicsUnit.Pixel);
-			postprocess?.Invoke(crop, g);
-			return crop;
-		}
-
-		private static void ForAll(this Bitmap img, Func<Color, Color> transform)
-		{
-			for (int x = 0; x < img.Width; x++)
-			{
-				for (int y = 0; y < img.Height; y++)
-				{
-					var p = img.GetPixel(x, y);
-					img.SetPixel(x, y, transform(p));
-				}
-			}
 		}
 
 		public static T FindClosest<T>(this IEnumerable<(T, string)> kvs, string result)
