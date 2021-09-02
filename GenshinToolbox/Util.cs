@@ -67,6 +67,7 @@ namespace GenshinToolbox
 
 				Console.WriteLine("Resuming task in 500ms");
 				Thread.Sleep(500);
+				_WindowOffset = null;
 			}
 		}
 

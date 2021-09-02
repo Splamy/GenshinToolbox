@@ -31,13 +31,27 @@ namespace GenshinToolbox.Fisher
 
 				sw.Restart();
 
-				using var catchImg = Capture.Game(TrackBarRect);
-				if (!BarAssist(catchImg)) {
-					//CatchAssist();
+				if (LastRangeRect is { } lastRangeRect)
+				{
+					using var catchImg = Capture.Game(lastRangeRect);
+					if (!BarAssist(catchImg))
+						LastRangeRect = null;
+				}
+				else
+				{
+					foreach (var rect in TrackRangeRects)
+					{
+						using var catchImg = Capture.Game(rect);
+						if (BarAssist(catchImg))
+						{
+							LastRangeRect = rect;
+							break;
+						}
+					}
 				}
 
 				Util.PreciseSleep(Math.Max(5, Util.Frame - (int)sw.ElapsedMilliseconds));
-				Console.WriteLine("Frame: {0}", sw.ElapsedMilliseconds);
+				Console.WriteLine("Frame: {0}               ", sw.ElapsedMilliseconds);
 			}
 		}
 
@@ -50,8 +64,12 @@ namespace GenshinToolbox.Fisher
 
 				Console.WriteLine("Fish: {0}", cnt);
 
-				using var img = new Bitmap(Image.FromFile($"./DbgImgs/fish_{cnt:0000}.png"));
-				BarAssist(img);
+				using var img = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_17-28-58.png"));
+				using var catchImg = img.CropOut(TrackRangeRect1);
+				catchImg.Save($"./DbgImgs/fish_current.png");
+
+				//using var img = new Bitmap(Image.FromFile($"./DbgImgs/fish_{cnt:0000}.png"));
+				BarAssist(catchImg);
 				cnt++;
 				Console.ReadKey();
 			}
@@ -61,7 +79,7 @@ namespace GenshinToolbox.Fisher
 		{
 			while (true)
 			{
-				using var catchImg = Capture.Game(TrackBarRect);
+				using var catchImg = Capture.Game(TrackRangeRect1);
 				catchImg.Save($"./DbgImgs/fish_{cnt++:0000}.png");
 
 				try
@@ -77,7 +95,11 @@ namespace GenshinToolbox.Fisher
 		static int cnt = 0;
 
 		const int BarWidth = 489;
-		static readonly Rectangle TrackBarRect = new(719, 100, BarWidth, 30);
+		static readonly Rectangle TrackRangeRect1 = new(719, 100, BarWidth, 30);
+		static readonly Rectangle TrackRangeRect2 = new(719, 147, BarWidth, 30);
+		static readonly Rectangle[] TrackRangeRects = new[] { TrackRangeRect1, TrackRangeRect2 };
+		static Rectangle? LastRangeRect = null;
+
 		static readonly Color PissColor = Color.FromArgb(255, 255, 192);
 		static readonly int[] MeasureBuffer = new int[BarWidth];
 
@@ -212,19 +234,23 @@ namespace GenshinToolbox.Fisher
 
 			int compareTarget;
 
-			switch (BarVelo, RangeVelo)
-			{
-			case ( <= 0, <= 0):
-			case ( > 0, > 0):
-				compareTarget = rangeCenter;
-				break;
-			case ( <= 0, > 0):
-				compareTarget = rangeCenter + range.width / 4;
-				break;
-			case ( > 0, <= 0):
-				compareTarget = rangeCenter - range.width / 4;
-				break;
-			}
+			//switch (BarVelo, RangeVelo)
+			//{
+			//case ( <= 0, <= 0):
+			//case ( > 0, > 0):
+			//	compareTarget = rangeCenter;
+			//	break;
+			//case ( <= 0, > 0):
+			//	compareTarget = rangeCenter + range.width / 4;
+			//	break;
+			//case ( > 0, <= 0):
+			//	compareTarget = rangeCenter - range.width / 4;
+			//	break;
+			//}
+
+			//compareTarget = rangeCenter + Math.Clamp(BarVelo, -range.width / 2, range.width / 2);
+
+			compareTarget = rangeCenter;
 
 			// Simple logic test
 			if (barPos < compareTarget)
