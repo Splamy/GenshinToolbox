@@ -208,22 +208,6 @@ namespace GenshinToolbox.Fisher
 			var range = (start: largestBumpStart, width: largestBumpLength);
 			var rangeCenter = range.start + (range.width / 2);
 
-			static int PxToDraw(int px) => 100 * px / TrackRangeWidth;
-
-			Console.Write('[');
-			Console.Write(new string(' ', PxToDraw(range.start)));
-			Console.Write(new string('#', PxToDraw(range.width)));
-			Console.Write(new string(' ', PxToDraw(TrackRangeWidth - (range.start + range.width))));
-			Console.Write(']');
-			Console.WriteLine();
-
-			Console.Write('[');
-			Console.Write(new string(' ', PxToDraw(barPos)));
-			Console.Write('I');
-			Console.Write(new string(' ', PxToDraw(TrackRangeWidth - barPos)));
-			Console.Write(']');
-			Console.WriteLine();
-
 			if (!wasFound)
 			{
 				BarVelo = 0;
@@ -239,27 +223,28 @@ namespace GenshinToolbox.Fisher
 
 			Console.WriteLine("Velo Bar:{0:000} Range:{1:000}     ", BarVelo, RangeVelo);
 
-			int compareTarget;
+			const int MinClickBoost = 25; // about 25 px are added after a 1 frame click
 
-			//switch (BarVelo, RangeVelo)
-			//{
-			//case ( <= 0, <= 0):
-			//case ( > 0, > 0):
-			//	compareTarget = rangeCenter;
-			//	break;
-			//case ( <= 0, > 0):
-			//	compareTarget = rangeCenter + range.width / 4;
-			//	break;
-			//case ( > 0, <= 0):
-			//	compareTarget = rangeCenter - range.width / 4;
-			//	break;
-			//}
+			var absRangeVelo = Math.Abs(RangeVelo);
+			var absClampRangeVelo = Math.Min(absRangeVelo, range.width / 4);
 
-			//compareTarget = rangeCenter + Math.Clamp(BarVelo, -range.width / 2, range.width / 2);
+			int compareTarget = RangeVelo switch
+			{
+				0 => rangeCenter - MinClickBoost,
+				< 0 => compareTarget = rangeCenter - ((range.width / 4) + Math.Min(absRangeVelo, range.width / 4)),
+				> 0 => compareTarget = rangeCenter + Math.Min(absRangeVelo, range.width / 4) - MinClickBoost,
+			};
 
-			compareTarget = rangeCenter;
+			//int compareTarget = rangeCenter + Math.Clamp(RangeVelo, -range.width / 2, range.width / 4);
 
-			// Simple logic test
+			//int compareTarget = rangeCenter;
+
+			compareTarget = Math.Clamp(compareTarget, range.start, range.start + range.width);
+			if (!Util.GenshinHasFocus()) {
+				Console.WriteLine("Waiting for focus            ");
+				return false;
+			}
+
 			if (barPos < compareTarget)
 			{
 				Util.inp.Mouse.LeftButtonDown();
@@ -270,6 +255,24 @@ namespace GenshinToolbox.Fisher
 				Util.inp.Mouse.LeftButtonUp();
 				Console.WriteLine("Up              ");
 			}
+
+			var consoleWidth = Console.WindowWidth;
+			int PxToDraw(int px) => Math.Clamp(consoleWidth * px / TrackRangeWidth, 0, consoleWidth - 1);
+			var clearLine = new string(' ', consoleWidth);
+			var (cursorLeft, cursorTop) = Console.GetCursorPosition();
+			Console.SetCursorPosition(0, cursorTop);
+			Console.Write(clearLine);
+
+			Console.SetCursorPosition(PxToDraw(range.start), cursorTop);
+			Console.Write('<');
+			Console.SetCursorPosition(PxToDraw(range.start + range.width), cursorTop);
+			Console.Write('>');
+			Console.SetCursorPosition(PxToDraw(compareTarget), cursorTop);
+			Console.Write('_');
+			Console.SetCursorPosition(PxToDraw(barPos), cursorTop);
+			Console.Write('I');
+
+			Console.SetCursorPosition(0, cursorTop + 1);
 
 			return true;
 		}
