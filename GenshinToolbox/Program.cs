@@ -22,31 +22,72 @@ namespace GenshinToolbox
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions, FisherOptions>(args).MapResult(
-				(PlayerOptions o) =>
+				(Func<PlayerOptions, int>)RunPlayer,
+				(Func<CollectOptions, int>)RunCollect,
+				(Func<ArtifactsOptions, int>)RunArtifacts,
+				(Func<FisherOptions, int>)RunFisher,
+				errs =>
 				{
-					var museEngine = new MuseEngine();
-					museEngine.InteractiveConsole();
+					ConsoleSelector();
 					return 0;
-				},
-				(CollectOptions o) =>
+				});
+		}
+
+		static void ConsoleSelector() {
+			while (true)
+			{
+				Console.Clear();
+				Console.WriteLine("1. Music Player");
+				Console.WriteLine("2. Expedition Collector");
+				Console.WriteLine("3. Artifacts Analyzer");
+				Console.WriteLine("4. Fishing Assistant");
+
+				switch (Console.ReadKey().Key)
 				{
-					AutoCollector.AutoCollect(o.CollectSlowdown, o.CollectWarmup);
-					return 0;
-				},
-				(ArtifactsOptions o) =>
-				{
-					Scraper.Run(o);
-					return 0;
-				},
-				(FisherOptions o) =>
-				{
-					AutoFisher.Run(o);
-					return 0;
-				},
-				errs => 1);
+				case ConsoleKey.D1:
+					RunPlayer(new());
+					break;
+				case ConsoleKey.D2:
+					RunCollect(new());
+					break;
+				case ConsoleKey.D3:
+					RunArtifacts(new());
+					break;
+				case ConsoleKey.D4:
+					RunFisher(new());
+					break;
+				default:
+					continue;
+				}
+				break;
+			}
+		}
+
+		static int RunPlayer(PlayerOptions _)
+		{
+			var museEngine = new MuseEngine();
+			museEngine.InteractiveConsole();
+			return 0;
+		}
+
+		static int RunCollect(CollectOptions o)
+		{
+			AutoCollector.AutoCollect(o.CollectSlowdown, o.CollectWarmup);
+			return 0;
+		}
+
+		static int RunArtifacts(ArtifactsOptions o)
+		{
+			Scraper.Run(o);
+			return 0;
+		}
+
+		static int RunFisher(FisherOptions o)
+		{
+			AutoFisher.Run(o);
+			return 0;
 		}
 	}
-
 
 	[Verb("player", HelpText = "")]
 	class PlayerOptions

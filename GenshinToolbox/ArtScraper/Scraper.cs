@@ -152,9 +152,19 @@ namespace GenshinToolbox.ArtScraper
 					Console.Write("Min stars (Default: >=5):");
 					if (!int.TryParse(Console.ReadLine()!.Trim(), out var minStars))
 						minStars = 5;
+					Console.Write("Count (Default: 1000):");
+					if (!int.TryParse(Console.ReadLine()!.Trim(), out var amount))
+						minStars = 1000;
 
 					opts.MinLevel = minLevel;
 					opts.MinStars = minStars;
+					opts.Max = amount;
+					if (opts.Debug && opts.Max > 1)
+					{
+						Console.WriteLine("Multiple artifacts not supported with debug flag enabled");
+						Thread.Sleep(2000);
+						break;
+					}
 					AnalyzeAll(opts);
 					break;
 				case '3':
@@ -399,7 +409,7 @@ namespace GenshinToolbox.ArtScraper
 			T ProcessStat<T>(string dbgName, Rectangle area, Action<Bitmap, Graphics>? postprocess, Func<string, T> filter)
 			{
 				using var crop = img.CropOut(area);
-				if (postprocess != null) img.ApplyFilter(postprocess);
+				if (postprocess != null) crop.ApplyFilter(postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
 				using var Input = new OcrInput(crop);
 				var Result = Ocr.Read(Input);
@@ -413,7 +423,7 @@ namespace GenshinToolbox.ArtScraper
 			var stars = 0;
 			for (int i = 0; i < 5; i++)
 			{
-				var checkPx = starCrop.GetPixel(28 * i + 22 / 2, 22 / 2);
+				var checkPx = starCrop.GetPixel((28 * i) + (22 / 2), 22 / 2);
 				if (checkPx.R > 180 && checkPx.G > 180 && checkPx.B < 100)
 				{
 					stars = i + 1;

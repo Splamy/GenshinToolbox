@@ -200,7 +200,7 @@ namespace GenshinToolbox
 			R = r;
 			G = g;
 			B = b;
-			_X = 0;
+			_X = 255;
 		}
 
 		public override bool Equals(object? obj)
