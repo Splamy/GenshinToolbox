@@ -8,7 +8,7 @@ using System.Xml.Linq;
 
 namespace GenshinToolbox.Player
 {
-	public class MXMLParser
+	public static class MXMLParser
 	{
 		public static Song Parse(MXMlConf conf)
 		{
@@ -148,7 +148,7 @@ namespace GenshinToolbox.Player
 					}
 
 					// After each measure fill all voices up with silence to be in sync
-					currentLen = voicesInCurrentPart.Select(ve => ve.Length).Max();
+					currentLen = voicesInCurrentPart.Max(ve => ve.Length);
 					foreach (var ve in voicesInCurrentPart)
 					{
 						if (ve.Length < currentLen)

@@ -76,7 +76,7 @@ namespace GenshinToolbox
 			public int Right;
 			public int Bottom;
 
-			public Rectangle ToRectangle() => new(Left, Top, Right - Left, Bottom - Top);
+			public Rectangle ToRectangle() => Rectangle.FromLTRB(Left, Top, Right, Bottom);
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

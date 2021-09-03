@@ -3,7 +3,6 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using System.Threading;
 using WindowsInput;
 using WindowsInput.Native;
@@ -15,7 +14,7 @@ namespace GenshinToolbox
 	{
 		public static readonly int Frame = (int)Math.Ceiling(1000 / 60f);
 
-		private static readonly Point MinimizedLoc = new Point(-32000, -32000);
+		private static readonly Point MinimizedLoc = new(-32000, -32000);
 
 		private static Point? _WindowOffset = null;
 		private static Process? _proc = null;
@@ -33,11 +32,7 @@ namespace GenshinToolbox
 
 		private static Process GetProcess()
 		{
-			if (_proc is null)
-			{
-				_proc = Process.GetProcessesByName("GenshinImpact").First();
-			}
-			return _proc;
+			return _proc ??= Process.GetProcessesByName("GenshinImpact")[0];
 		}
 
 		private static Point GetWindowRect()
@@ -70,7 +65,6 @@ namespace GenshinToolbox
 				_WindowOffset = null;
 			}
 		}
-
 
 		public static void ClickTimed(Point p)
 		{
@@ -143,6 +137,10 @@ namespace GenshinToolbox
 		{
 			return new Point(operand1.X + operand2.X, operand1.Y + operand2.Y);
 		}
+
+		public static Rectangle AddTop(this Rectangle rect, int add) => new(new(rect.Left, rect.Top + add), rect.Size);
+
+		public static Rectangle SetHeight(this Rectangle rect, int height) => new(rect.Location, new(rect.Width, height));
 	}
 
 	public enum AxisDir

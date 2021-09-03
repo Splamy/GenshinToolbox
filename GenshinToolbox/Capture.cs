@@ -7,7 +7,7 @@ namespace GenshinToolbox
 		public static Bitmap Screen(Rectangle rect) => Screen(rect.Location, rect.Size);
 		public static Bitmap Screen(Point pos, Size size)
 		{
-			var result = new Bitmap(size.Width, size.Height);
+			var result = new Bitmap(size.Width, size.Height, ImageExt.SharedPixelFormat);
 			using var g = Graphics.FromImage(result);
 			g.CopyFromScreen(pos, Point.Empty, size);
 			return result;

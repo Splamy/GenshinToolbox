@@ -4,7 +4,7 @@ using static GenshinToolbox.Player.Scale;
 
 namespace GenshinToolbox.Player.Songs
 {
-	class Warframe_LiftTogether
+	static class Warframe_LiftTogether
 	{
 		public static Song Get()
 		{

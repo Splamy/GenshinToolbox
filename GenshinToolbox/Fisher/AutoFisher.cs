@@ -7,9 +7,9 @@ using System.Threading;
 
 namespace GenshinToolbox.Fisher
 {
-	static class AutoFisher
+	internal static class AutoFisher
 	{
-		public static void Run(FisherOptions options)
+		public static void Run(FisherOptions _)
 		{
 			RunInternal();
 			//Iterate();
@@ -22,69 +22,72 @@ namespace GenshinToolbox.Fisher
 			//}
 		}
 
-		private static void RunInternal()
+		static void RunInternal()
 		{
 			var sw = new Stopwatch();
 			while (true)
 			{
 				Console.SetCursorPosition(0, 0);
+				//Console.Clear();
 
 				sw.Restart();
 
-				if (LastRangeRect is { } lastRangeRect)
+				using var catchImg = Capture.Game(TrackRangeRectAll);
+				if (LastRangeTopOff.HasValue)
 				{
-					using var catchImg = Capture.Game(lastRangeRect);
-					if (!BarAssist(catchImg))
-						LastRangeRect = null;
+					if (!BarAssist(catchImg, new Rectangle(0, LastRangeTopOff.Value, TrackRangeWidth, TrackRangeHeigth)))
+						LastRangeTopOff = null;
 				}
 				else
 				{
-					foreach (var rect in TrackRangeRects)
+					foreach (var off in TrackRangeTopOff)
 					{
-						using var catchImg = Capture.Game(rect);
-						if (BarAssist(catchImg))
+						if (BarAssist(catchImg, new Rectangle(0, off, TrackRangeWidth, TrackRangeHeigth)))
 						{
-							LastRangeRect = rect;
+							LastRangeTopOff = off;
 							break;
 						}
 					}
 				}
 
-				Util.PreciseSleep(Math.Max(5, Util.Frame - (int)sw.ElapsedMilliseconds));
-				Console.WriteLine("Frame: {0}               ", sw.ElapsedMilliseconds);
+				var workTime = sw.ElapsedMilliseconds;
+				Thread.Sleep(Math.Max(1, Util.Frame - (int)sw.ElapsedMilliseconds));
+				Console.WriteLine("Work: {0:000}ms  Frame: {1:000}ms               ", workTime, sw.ElapsedMilliseconds);
 			}
 		}
 
-		private static void Iterate()
+		static void Iterate()
 		{
-			cnt = 14;
+			cnt = 109;
 			while (true)
 			{
 				Console.Clear();
 
 				Console.WriteLine("Fish: {0}", cnt);
 
-				using var img = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_17-28-58.png"));
-				using var catchImg = img.CropOut(TrackRangeRect1);
-				catchImg.Save($"./DbgImgs/fish_current.png");
+				using var catchImg = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_17-28-58.png")).ToSharedPixelFormat();
+				var slice = TrackRangeRectAll.AddTop(TrackRangeTopOff[1]).SetHeight(TrackRangeHeigth);
+				//catchImg.Save($"./DbgImgs/fish_current.png");
 
-				//using var img = new Bitmap(Image.FromFile($"./DbgImgs/fish_{cnt:0000}.png"));
-				BarAssist(catchImg);
+				//using var catchImg = new Bitmap(Image.FromFile($"./DbgImgs/fish_match/fish_{cnt:0000}.png")).ToSharedPixelFormat();
+				// var slice = new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth);
+
+				BarAssist(catchImg, slice);
 				cnt++;
 				Console.ReadKey();
 			}
 		}
 
-		private static void Record()
+		static void Record()
 		{
 			while (true)
 			{
-				using var catchImg = Capture.Game(TrackRangeRect1);
+				using var catchImg = Capture.Game(TrackRangeRectAll);
 				catchImg.Save($"./DbgImgs/fish_{cnt++:0000}.png");
 
 				try
 				{
-					BarAssist(catchImg);
+					BarAssist(catchImg, new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth));
 				}
 				catch { }
 
@@ -92,26 +95,26 @@ namespace GenshinToolbox.Fisher
 			}
 		}
 
-		static int cnt = 0;
+		static int cnt;
 
-		const int BarWidth = 489;
-		static readonly Rectangle TrackRangeRect1 = new(719, 100, BarWidth, 30);
-		static readonly Rectangle TrackRangeRect2 = new(719, 147, BarWidth, 30);
-		static readonly Rectangle[] TrackRangeRects = new[] { TrackRangeRect1, TrackRangeRect2 };
-		static Rectangle? LastRangeRect = null;
+
+		static readonly Rectangle TrackRangeRectAll = new(719, 100, TrackRangeWidth, 80);
+		const int TrackRangeWidth = 489;
+		const int TrackRangeHeigth = 30;
+		static readonly int[] TrackRangeTopOff = new[] { 0, 47 };
+		static int? LastRangeTopOff = null;
 
 		static readonly Color PissColor = Color.FromArgb(255, 255, 192);
-		static readonly int[] MeasureBuffer = new int[BarWidth];
+		static readonly int[] MeasureBuffer = new int[TrackRangeWidth];
 
-		static bool found = false;
-		static int RangeVelo = 0;
-		static int BarVelo = 0;
-		static int LastRangePos = 0; // Using center here
-		static int LastBarPos = 0;
+		static bool found;
+		static int RangeVelo;
+		static int BarVelo;
+		static int LastRangePos; // Using center here
+		static int LastBarPos;
 
-		public static bool BarAssist(Bitmap catchImg)
+		public static bool BarAssist(Bitmap catchImg, Rectangle slice)
 		{
-			//Console.Clear();
 			//Console.SetCursorPosition(0, 0);
 
 			//using var img = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_03-07-50.png"));
@@ -120,25 +123,29 @@ namespace GenshinToolbox.Fisher
 			//catchImg.Save($"./DbgImgs/fish_current.png");
 
 			#region FindBar
+			MeasureBuffer.AsSpan().Clear();
+
+			using var fastbmp = new FastBitmap(catchImg);
+
+			for (int y = slice.Top; y < slice.Bottom; y++)
+			{
+				var row = fastbmp.GetRow(y);
+				for (int x = slice.Left; x < Math.Min(slice.Right, row.Length); x++)
+				{
+					int i = x - slice.Left;
+					var p = row[x];
+					if (p.R > 240 && p.G > 210 && (p.B > 30 && p.B < 220))
+						MeasureBuffer[i]++;
+				}
+			}
+
 			int bestBarPosRating = 0;
 			int bestBarPos = 0;
-			int whiteOut = 0;
-
-			for (int x = 0; x < catchImg.Width; x++)
+			for (int x = 0; x < MeasureBuffer.Length; x++)
 			{
-				int colCnt = 0;
-				for (int y = 0; y < catchImg.Height; y++)
+				if (MeasureBuffer[x] > bestBarPosRating)
 				{
-					var p = catchImg.GetPixel(x, y);
-					if (p.R > 240 && p.G > 210 && (p.B > 30 && p.B < 220))
-						colCnt++;
-					else if (p.RgbEq(Color.White))
-						whiteOut++;
-				}
-				MeasureBuffer[x] = colCnt;
-				if (colCnt > bestBarPosRating)
-				{
-					bestBarPosRating = colCnt;
+					bestBarPosRating = MeasureBuffer[x];
 					bestBarPos = x;
 				}
 			}
@@ -187,9 +194,9 @@ namespace GenshinToolbox.Fisher
 			#endregion
 
 			var wasFound = found;
-			if (bestBarPosRating == 0 || largestBumpLength < 30 || whiteOut > 10)
+			if (bestBarPosRating == 0 || largestBumpLength < 30)
 			{
-				Console.WriteLine("No bar found {0}                      ", whiteOut > 10);
+				Console.WriteLine("No bar found                          ");
 				found = false;
 				return false;
 			}
@@ -201,19 +208,19 @@ namespace GenshinToolbox.Fisher
 			var range = (start: largestBumpStart, width: largestBumpLength);
 			var rangeCenter = range.start + (range.width / 2);
 
-			static int PxToDraw(int px) => 100 * px / BarWidth;
+			static int PxToDraw(int px) => 100 * px / TrackRangeWidth;
 
 			Console.Write('[');
 			Console.Write(new string(' ', PxToDraw(range.start)));
 			Console.Write(new string('#', PxToDraw(range.width)));
-			Console.Write(new string(' ', PxToDraw(BarWidth - (range.start + range.width))));
+			Console.Write(new string(' ', PxToDraw(TrackRangeWidth - (range.start + range.width))));
 			Console.Write(']');
 			Console.WriteLine();
 
 			Console.Write('[');
 			Console.Write(new string(' ', PxToDraw(barPos)));
 			Console.Write('I');
-			Console.Write(new string(' ', PxToDraw(BarWidth - barPos)));
+			Console.Write(new string(' ', PxToDraw(TrackRangeWidth - barPos)));
 			Console.Write(']');
 			Console.WriteLine();
 
@@ -267,21 +274,18 @@ namespace GenshinToolbox.Fisher
 			return true;
 		}
 
-
-
 		static readonly Rectangle ActionButtonRect = new(1594, 956, 75, 75);
 
 		static readonly bool? T = true;
 		static readonly bool? F = false;
 		static readonly bool? _ = null;
 
-
 		//.....
 		//...##
 		//..#..
 		//.#...
 		//.....
-		static readonly bool?[,] HookReady = {
+		public static readonly bool?[,] HookReady = {
 			{ _, _, _, _, _ },
 			{ _, _, _, T, T },
 			{ _, F, T, F, _ },
@@ -294,7 +298,7 @@ namespace GenshinToolbox.Fisher
 		//.###.
 		//...#.
 		//.....
-		static readonly bool?[,] HookWaiting = {
+		public static readonly bool?[,] HookWaiting = {
 			{ _, _, _, _, _ },
 			{ _, _, _, F, F },
 			{ _, T, T, T, _ },

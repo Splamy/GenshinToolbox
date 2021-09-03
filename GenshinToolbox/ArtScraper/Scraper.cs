@@ -348,14 +348,14 @@ namespace GenshinToolbox.ArtScraper
 			Parallel.ForEach(
 				files,
 				() => GetOcrInstance(),
-				(file, state, ocr) =>
+				(file, _, ocr) =>
 				{
 					var artData = Analyze(opts, ocr, file);
 					if (artData != null)
 						artList.Add(artData);
 					return ocr;
 				},
-				(ocr) => { }
+				(_) => { }
 			);
 
 			var collisionList = new Dictionary<string, int>();
@@ -394,11 +394,12 @@ namespace GenshinToolbox.ArtScraper
 
 		private static ArtData? Analyze(ArtifactsOptions opts, IronTesseract Ocr, string file)
 		{
-			using var img = new Bitmap(file);
+			using var img = new Bitmap(file).ToSharedPixelFormat();
 
 			T ProcessStat<T>(string dbgName, Rectangle area, Action<Bitmap, Graphics>? postprocess, Func<string, T> filter)
 			{
-				using var crop = img.CropOut(area, postprocess);
+				using var crop = img.CropOut(area);
+				if (postprocess != null) img.ApplyFilter(postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
 				using var Input = new OcrInput(crop);
 				var Result = Ocr.Read(Input);
@@ -476,12 +477,12 @@ namespace GenshinToolbox.ArtScraper
 				area.X = 20;
 				area.Width = 20;
 				int pxlCount = 0;
-				using var crop = img.CropOut(area, (i, g) => i.ForAll(px =>
+				using var crop = img.CropOut(area);
+				img.ForAll((ref Bgrx32 px) =>
 				{
 					if (px.R < 128 && px.G < 128 && px.B < 128)
 						pxlCount++;
-					return px;
-				}));
+				});
 
 				if (pxlCount < 2)
 					break;

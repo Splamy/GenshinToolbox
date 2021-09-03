@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace GenshinToolbox
 {
-	class Program
+	static class Program
 	{
 		static void Main(string[] args)
 		{

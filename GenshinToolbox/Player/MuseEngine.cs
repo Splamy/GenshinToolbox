@@ -284,7 +284,7 @@ namespace GenshinToolbox.Player
 			var shiftedList = new List<Accord>();
 			foreach (var p in part.Accords)
 			{
-				shiftedList.Add(new Accord(p.Length, p.Notes.Select(n => Shift(n, dir)).ToList()));
+				shiftedList.Add(new Accord(p.Length, p.Notes.ConvertAll(n => Shift(n, dir))));
 			}
 			return new Voice(shiftedList);
 		}
@@ -293,7 +293,7 @@ namespace GenshinToolbox.Player
 
 		public void InteractiveConsole()
 		{
-			var list = Confs.Select(MXMLParser.Parse).ToList();
+			var list = Confs.ConvertAll(MXMLParser.Parse);
 			InteractiveConsoleLoop(list);
 		}
 
