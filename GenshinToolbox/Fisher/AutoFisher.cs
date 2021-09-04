@@ -30,12 +30,22 @@ namespace GenshinToolbox.Fisher
 		{
 			var ocr = Ocr.GetInstance();
 			var sw = new Stopwatch();
+			bool isOcrReading = false;
 			while (true)
 			{
+				var workTime = sw.ElapsedMilliseconds;
+				var targetWait = isOcrReading ? 400 : Util.Frame;
+				Thread.Sleep(Math.Max(1, targetWait - (int)sw.ElapsedMilliseconds));
+				Console.SetCursorPosition(0, Console.WindowHeight - 1);
+				Console.Write("Work: {0:000}ms  Frame: {1:000}ms               ", workTime, sw.ElapsedMilliseconds);
+				sw.Restart();
 				Console.SetCursorPosition(0, 0);
 				//Console.Clear();
 
-				sw.Restart();
+				isOcrReading = false;
+
+				if (!ValidateFishing())
+					continue;
 
 				using var catchImg = Capture.Game(TrackRangeRectAll);
 				if (LastRangeTopOff.HasValue)
@@ -58,13 +68,10 @@ namespace GenshinToolbox.Fisher
 
 					if (!found && opt.AutoCatch)
 					{
-						CatchAssist(ocr, catchImg);
+						if (!CatchAssist(ocr, catchImg))
+							isOcrReading = true;
 					}
 				}
-
-				var workTime = sw.ElapsedMilliseconds;
-				Thread.Sleep(Math.Max(1, Util.Frame - (int)sw.ElapsedMilliseconds));
-				Console.WriteLine("Work: {0:000}ms  Frame: {1:000}ms               ", workTime, sw.ElapsedMilliseconds);
 			}
 		}
 
@@ -295,7 +302,13 @@ namespace GenshinToolbox.Fisher
 
 		public static bool CatchAssist(IronTesseract ocr, Bitmap catchImg)
 		{
-			catchImg.ApplyFilter(ImageExt.WhiteScaleFilter, OcrOffset);
+			var now = DateTime.Now;
+			var onCooldown = lastClick + TimeSpan.FromSeconds(1) > now;
+
+			if (onCooldown)
+				return true;
+
+			catchImg.ApplyFilter(ImageExt.WhiteFilter, OcrOffset);
 
 			ocr.Configuration.WhiteListCharacters = FishingCaughtText.Allow();
 			ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
@@ -309,8 +322,7 @@ namespace GenshinToolbox.Fisher
 
 			var acc = Ocr.Lehvenshtein(text, FishingCaughtText);
 
-			var now = DateTime.Now;
-			if (acc < 5 && lastClick + TimeSpan.FromSeconds(1) < now)
+			if (acc < 5 && !onCooldown)
 			{
 				Util.inp.Mouse.LeftButtonClick();
 				lastClick = now;
@@ -323,6 +335,31 @@ namespace GenshinToolbox.Fisher
 			//Console.WriteLine("DIST FISH: {0}              ", acc);
 
 			return false;
+		}
+
+
+		static readonly Rectangle IsFishingRect = new(1600, 950, 70, 100);
+		static readonly Rectangle MouseRect = new(23, 77, 8, 8);
+		static readonly Rectangle AbsMouseRect = IsFishingRect.Inner(MouseRect);
+		static readonly Bgrx32 MouseColor = new(255, 233, 44);
+
+		public static bool ValidateFishing()
+		{
+			using var img = Capture.Game(AbsMouseRect);
+			//img.Save("./DbgImgs/fish_check.png");
+			//Thread.Sleep(1000);
+			using var fastImg = new FastBitmap(img);
+			int findYellow = 0;
+			fastImg.ApplyFilter((ref Bgrx32 px) => findYellow += (px == MouseColor) ? 1 : 0);
+			if (findYellow == 34)
+			{
+				return true;
+			}
+			else
+			{
+				Console.WriteLine("Not fishing...                              ");
+				return false;
+			}
 		}
 	}
 }

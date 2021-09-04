@@ -141,6 +141,12 @@ namespace GenshinToolbox
 		public static Rectangle AddTop(this Rectangle rect, int add) => new(new(rect.Left, rect.Top + add), rect.Size);
 
 		public static Rectangle SetHeight(this Rectangle rect, int height) => new(rect.Location, new(rect.Width, height));
+
+		public static Rectangle Inner(this Rectangle rect, Rectangle inner)
+			=> new(rect.Location.Add(inner.Location), new Size(
+					Math.Min(rect.Width - inner.Left, inner.Width),
+					Math.Min(rect.Height - inner.Top, inner.Height)
+				));
 	}
 
 	public enum AxisDir
