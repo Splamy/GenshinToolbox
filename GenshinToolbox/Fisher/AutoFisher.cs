@@ -1,4 +1,5 @@
 ﻿
+using IronOcr;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,9 +10,12 @@ namespace GenshinToolbox.Fisher
 {
 	internal static class AutoFisher
 	{
-		public static void Run(FisherOptions _)
+		const string FishingCaughtText = "You've got a bite!";
+		static readonly string[] AllTexts = new[] { FishingCaughtText, "Switched to walking", "Switched to running" };
+
+		public static void Run(FisherOptions opt)
 		{
-			RunInternal();
+			RunInternal(opt);
 			//Iterate();
 			//Record();
 
@@ -22,8 +26,9 @@ namespace GenshinToolbox.Fisher
 			//}
 		}
 
-		static void RunInternal()
+		static void RunInternal(FisherOptions opt)
 		{
+			var ocr = Ocr.GetInstance();
 			var sw = new Stopwatch();
 			while (true)
 			{
@@ -40,13 +45,20 @@ namespace GenshinToolbox.Fisher
 				}
 				else
 				{
+					bool found = false;
 					foreach (var off in TrackRangeTopOff)
 					{
 						if (BarAssist(catchImg, new Rectangle(0, off, TrackRangeWidth, TrackRangeHeigth)))
 						{
 							LastRangeTopOff = off;
+							found = true;
 							break;
 						}
+					}
+
+					if (!found && opt.AutoCatch)
+					{
+						CatchAssist(ocr, catchImg);
 					}
 				}
 
@@ -97,8 +109,7 @@ namespace GenshinToolbox.Fisher
 
 		static int cnt;
 
-
-		static readonly Rectangle TrackRangeRectAll = new(719, 100, TrackRangeWidth, 80);
+		static readonly Rectangle TrackRangeRectAll = new(719, 100, TrackRangeWidth, 140);
 		const int TrackRangeWidth = 489;
 		const int TrackRangeHeigth = 30;
 		static readonly int[] TrackRangeTopOff = new[] { 0, 47 };
@@ -240,7 +251,8 @@ namespace GenshinToolbox.Fisher
 			//int compareTarget = rangeCenter;
 
 			compareTarget = Math.Clamp(compareTarget, range.start, range.start + range.width);
-			if (!Util.GenshinHasFocus()) {
+			if (!Util.GenshinHasFocus())
+			{
 				Console.WriteLine("Waiting for focus            ");
 				return false;
 			}
@@ -277,81 +289,38 @@ namespace GenshinToolbox.Fisher
 			return true;
 		}
 
-		static readonly Rectangle ActionButtonRect = new(1594, 956, 75, 75);
+		static DateTime lastClick = DateTime.MinValue;
+		const int OcrTopOffset = 100;
+		static readonly Rectangle OcrOffset = new(0, OcrTopOffset, TrackRangeWidth, TrackRangeRectAll.Height - OcrTopOffset);
 
-		static readonly bool? T = true;
-		static readonly bool? F = false;
-		static readonly bool? _ = null;
-
-		//.....
-		//...##
-		//..#..
-		//.#...
-		//.....
-		public static readonly bool?[,] HookReady = {
-			{ _, _, _, _, _ },
-			{ _, _, _, T, T },
-			{ _, F, T, F, _ },
-			{ _, T, F, F, _ },
-			{ _, _, _, _, _ },
-		};
-
-		//.....
-		//.....
-		//.###.
-		//...#.
-		//.....
-		public static readonly bool?[,] HookWaiting = {
-			{ _, _, _, _, _ },
-			{ _, _, _, F, F },
-			{ _, T, T, T, _ },
-			{ _, F, F, T, _ },
-			{ _, _, _, _, _ },
-		};
-
-		public static bool CatchAssist()
+		public static bool CatchAssist(IronTesseract ocr, Bitmap catchImg)
 		{
-			//using var img = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_06-30-04.png"));
-			//using var catchImg = img.CropOut(ActionButtonRect);
+			catchImg.ApplyFilter(ImageExt.WhiteScaleFilter, OcrOffset);
 
-			using var catchImg = Capture.Game(ActionButtonRect);
-			catchImg.ApplyFilter(ImageExt.WhiteFilter);
-			var mini = catchImg.ResizeTo(5, 5);
+			ocr.Configuration.WhiteListCharacters = FishingCaughtText.Allow();
+			ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
+			ocr.Configuration.TesseractVersion = TesseractVersion.Tesseract5;
+			ocr.Configuration.EngineMode = TesseractEngineMode.LstmOnly;
+			ocr.Language = OcrLanguage.EnglishFast;
 
-			int rateReady = 0;
-			int rateWaiting = 0;
-			int rateBit = 0;
+			using var Input = new OcrInput(catchImg, OcrOffset);
+			var Result = ocr.Read(Input);
+			var text = Result.Text;
 
-			static void HitMatch(ref int rate, bool? map, bool hit)
+			var acc = Ocr.Lehvenshtein(text, FishingCaughtText);
+
+			var now = DateTime.Now;
+			if (acc < 5 && lastClick + TimeSpan.FromSeconds(1) < now)
 			{
-				if (map is { } m)
-				{
-					rate += m == hit ? 1 : -1;
-				}
-			}
-
-			for (int x = 0; x < 5; x++)
-			{
-				Console.SetCursorPosition(0, 10 + x);
-				for (int y = 0; y < 5; y++)
-				{
-					bool hit = mini.GetPixel(x, y).RgbEq(Color.Black);
-					HitMatch(ref rateReady, HookReady[y, x], hit);
-					HitMatch(ref rateWaiting, HookWaiting[y, x], hit);
-					rateBit += hit ? 1 : 0;
-					Console.Write("{0}", hit ? '#' : '.');
-				}
-			}
-			Console.WriteLine();
-			if (rateBit == 0)
-			{
-				Console.WriteLine("Status: HIT");
 				Util.inp.Mouse.LeftButtonClick();
+				lastClick = now;
+				return true;
 			}
-			else
-			{
-				Console.WriteLine("Status: {0}", rateReady > rateWaiting ? "Ready" : "Waiting");
-			}
+
+			//Console.SetCursorPosition(0, 10);
+			//Console.WriteLine("DETECTED: {0}               ", text);
+			//Console.WriteLine("DIST WALK: {0}              ", Ocr.Lehvenshtein(text, "Switched to walking"));
+			//Console.WriteLine("DIST FISH: {0}              ", acc);
 
 			return false;
 		}

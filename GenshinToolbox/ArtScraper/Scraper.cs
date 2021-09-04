@@ -290,11 +290,8 @@ namespace GenshinToolbox.ArtScraper
 
 			var alignZero = new string('0', (int)Math.Floor(Math.Log10(Math.Min(opts.Max, 1000))) + 1);
 
-			while (true)
+			while (index < opts.Max)
 			{
-				if (index >= opts.Max)
-					break;
-
 				Util.WaitForFocus();
 
 				if (hasMoved)
@@ -357,7 +354,7 @@ namespace GenshinToolbox.ArtScraper
 			var files = Directory.EnumerateFiles(ArtsFolder).Take(opts.Max).ToArray();
 			Parallel.ForEach(
 				files,
-				() => GetOcrInstance(),
+				() => Ocr.GetInstance(),
 				(file, _, ocr) =>
 				{
 					var artData = Analyze(opts, ocr, file);
@@ -393,26 +390,17 @@ namespace GenshinToolbox.ArtScraper
 			Console.ReadKey();
 		}
 
-		private static IronTesseract GetOcrInstance()
-		{
-			var ocr = new IronTesseract();
-			ocr.Configuration.ReadBarCodes = false;
-			ocr.Configuration.RenderSearchablePdfsAndHocr = false;
-			ocr.Language = OcrLanguage.English;
-			return ocr;
-		}
-
-		private static ArtData? Analyze(ArtifactsOptions opts, IronTesseract Ocr, string file)
+		private static ArtData? Analyze(ArtifactsOptions opts, IronTesseract ocr, string file)
 		{
 			using var img = new Bitmap(file).ToSharedPixelFormat();
 
-			T ProcessStat<T>(string dbgName, Rectangle area, Action<Bitmap, Graphics>? postprocess, Func<string, T> filter)
+			T ProcessStat<T>(string dbgName, Rectangle area, PxFunc? postprocess, Func<string, T> filter)
 			{
 				using var crop = img.CropOut(area);
 				if (postprocess != null) crop.ApplyFilter(postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
 				using var Input = new OcrInput(crop);
-				var Result = Ocr.Read(Input);
+				var Result = ocr.Read(Input);
 				var text = Result.Text;
 				var guess = filter(text);
 				Console.WriteLine("For {0}: got '{1}', reading {2}", dbgName, text, guess);
@@ -437,29 +425,29 @@ namespace GenshinToolbox.ArtScraper
 			if (stars < opts.MinStars)
 				return null;
 
-			Ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
+			ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
 
-			Ocr.Configuration.WhiteListCharacters = (Numbers + "+").Allow();
+			ocr.Configuration.WhiteListCharacters = (Numbers + "+").Allow();
 			var levelNum = ProcessStat(
 				"level",
 				Areas[4],
-				ImageExt.WhiteFilter,
+				ImageExt.WhiteScaleFilter,
 				text => int.TryParse(text, out var num) ? num : -1
 			);
 
 			if (levelNum < opts.MinLevel)
 				return null;
 
-			Ocr.Configuration.WhiteListCharacters = SlotNames.Values.Allow();
+			ocr.Configuration.WhiteListCharacters = SlotNames.Values.Allow();
 			Slot slot = ProcessStat(
 				"subName",
 				Areas[1],
-				ImageExt.WhiteFilter,
+				ImageExt.WhiteScaleFilter,
 				text => SlotNames.FindClosest(text)
 			);
 			var slotData = StatCategory[slot];
 
-			Ocr.Configuration.WhiteListCharacters = slotData.main.Select(s => StatNames[s]).Allow();
+			ocr.Configuration.WhiteListCharacters = slotData.main.Select(s => StatNames[s]).Allow();
 			Stat mainStat = ProcessStat(
 				"mainStat",
 				Areas[2],
@@ -467,11 +455,11 @@ namespace GenshinToolbox.ArtScraper
 				text => slotData.main.Select(s => (s, StatNames[s])).FindClosest(text)
 			);
 
-			Ocr.Configuration.WhiteListCharacters = CharsNumbers.Allow();
+			ocr.Configuration.WhiteListCharacters = CharsNumbers.Allow();
 			string mainStatValueText = ProcessStat(
 				"mainStatValue",
 				Areas[3],
-				ImageExt.WhiteFilter,
+				ImageExt.WhiteScaleFilter,
 				text => text
 			);
 			mainStat = ModStatWithPercent(mainStat, mainStatValueText, slotData.main);
@@ -487,17 +475,16 @@ namespace GenshinToolbox.ArtScraper
 				area.X = 20;
 				area.Width = 20;
 				int pxlCount = 0;
-				using var crop = img.CropOut(area);
-				img.ForAll((ref Bgrx32 px) =>
+				img.ApplyFilter((ref Bgrx32 px) =>
 				{
 					if (px.R < 128 && px.G < 128 && px.B < 128)
 						pxlCount++;
-				});
+				}, area);
 
 				if (pxlCount < 2)
 					break;
 
-				Ocr.Configuration.WhiteListCharacters = allowedSubstats.Select(s => StatNames[s]).Concat(new[] { CharsNumbers }).Allow();
+				ocr.Configuration.WhiteListCharacters = allowedSubstats.Select(s => StatNames[s]).Concat(new[] { CharsNumbers }).Allow();
 				var substat = ProcessStat(
 					$"subStat{i}",
 					Areas[6 + i],
@@ -529,7 +516,7 @@ namespace GenshinToolbox.ArtScraper
 					subStats.Add(substat);
 			}
 
-			Ocr.Configuration.WhiteListCharacters = SetNames.Values.Concat(new[] { CharsSet }).Allow();
+			ocr.Configuration.WhiteListCharacters = SetNames.Values.Concat(new[] { CharsSet }).Allow();
 			//var pos = Areas[10];
 			//pos.Y -= (4 - subStats.Count) * 32;
 			var artSet = ProcessStat(
@@ -557,76 +544,6 @@ namespace GenshinToolbox.ArtScraper
 				SubStats = subStats,
 			};
 		}
-
-		public static T FindClosest<T>(this IEnumerable<(T, string)> kvs, string result)
-			=> kvs.Select(s => new KeyValuePair<T, string>(s.Item1, s.Item2)).FindClosest(result);
-		public static T FindClosest<T>(this IEnumerable<KeyValuePair<T, string>> kvs, string result)
-		{
-			var bestDist = int.MaxValue;
-			T best = default!;
-			foreach (var kvp in kvs)
-			{
-				var dist = Lehvenshtein(kvp.Value, result);
-				if (dist < bestDist)
-				{
-					bestDist = dist;
-					best = kvp.Key;
-					if (dist == 0)
-						return best;
-				}
-			}
-			return best;
-		}
-
-		static int Lehvenshtein(string s, string t)
-		{
-			if (s == t)
-			{
-				return 0;
-			}
-
-			int n = s.Length;
-			int m = t.Length;
-			int[,] d = new int[n + 1, m + 1];
-
-			// Verify arguments.
-			if (n == 0)
-			{
-				return m;
-			}
-
-			if (m == 0)
-			{
-				return n;
-			}
-
-			// Initialize arrays.
-			for (int i = 0; i <= n; d[i, 0] = i++) { }
-
-			for (int j = 0; j <= m; d[0, j] = j++) { }
-
-			// Begin looping.
-			for (int i = 1; i <= n; i++)
-			{
-				for (int j = 1; j <= m; j++)
-				{
-					// Compute cost.
-					int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
-					d[i, j] = Math.Min(
-						Math.Min(
-							d[i - 1, j] + 1,
-							d[i, j - 1] + 1
-						),
-						d[i - 1, j - 1] + cost
-					);
-				}
-			}
-			// Return cost.
-			return d[n, m];
-		}
-
-		private static string Allow(this IEnumerable<string> enu) => enu.SelectMany(x => x).Allow();
-		private static string Allow(this IEnumerable<char> enu) => string.Join("", enu.Distinct().OrderBy(x => x));
 
 		public static Stat ModStatWithPercent(Stat orig, string value, IList<Stat> valid)
 		{
@@ -771,77 +688,5 @@ namespace GenshinToolbox.ArtScraper
 	record StatGroup(Stat Type, float Value, string Raw)
 	{
 		public override string ToString() => $"{Type}:{Value}";
-	}
-
-	enum Slot
-	{
-		Flower,
-		Plume,
-		Sands,
-		Goblet,
-		Circlet
-	}
-
-	enum Stat
-	{
-		Atk,
-		AtkPerc,
-		Hp,
-		HpPerc,
-		Def,
-		DefPerc,
-		EnergyRecharge,
-		ElementalMastery,
-		CritDmg,
-		CritRate,
-
-		PyroDmgBonus,
-		HydroDmgBonus,
-		ElectroDmgBonus,
-		AnemoDmgBonus,
-		CryoDmgBonus,
-		GeoDmgBonus,
-		PhysicalDmgBonus,
-		HealingBonusPerc,
-	}
-
-	enum ArtSet
-	{
-		GladiatorsFinale,
-		WanderersTroupe,
-		ViridescentVenerer,
-		ThunderingFury,
-		Thundersoother,
-		CrimsonWitchOfFlames,
-		Lavawalker,
-		ArchaicPetra,
-		RetracingBolide,
-		MaidenBeloved,
-		NoblesseOblige,
-		BloodstainedChivalry,
-		BlizzardStrayer,
-		HeartOfDepth,
-		TenacityOfTheMillelith,
-		PaleFlame,
-		EmblemOfSeveredFate,
-		ShimenawasReminiscence,
-		Instructor,
-		TheExile,
-		ResolutionOfSojourner,
-		MartialArtist,
-		DefendersWill,
-		TinyMiracle,
-		BraveHeart,
-		Gambler,
-		Scholar,
-		PrayersForWisdom,
-		PrayersToSpringtime,
-		PrayersForIllumination,
-		PrayersForDestiny,
-		Berserker,
-		LuckyDog,
-		TravelingDoctor,
-		Adventurer,
-		Initiate,
 	}
 }

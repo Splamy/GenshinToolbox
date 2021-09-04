@@ -126,5 +126,9 @@ namespace GenshinToolbox
 	[Verb("fisher", HelpText = "")]
 	class FisherOptions
 	{
+		[Option('c', "no-auto-catch", Required = false, Default = false)]
+		public bool NoAutoCatch { get; set; }
+		public bool AutoCatch => !NoAutoCatch;
 	}
+
 }
