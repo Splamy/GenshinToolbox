@@ -128,6 +128,8 @@ namespace GenshinToolbox
 			}
 		}
 
+		public static void ExactWhiteFilter(ref Bgrx32 px) => px = px == Bgrx32.White ? Bgrx32.White : Bgrx32.Black;
+
 		public static bool RgbEq(this Color color, Color other) =>
 			color.R == other.R && color.G == other.G && color.B == other.B;
 

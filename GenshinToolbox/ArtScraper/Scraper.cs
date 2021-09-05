@@ -354,7 +354,7 @@ namespace GenshinToolbox.ArtScraper
 			var files = Directory.EnumerateFiles(ArtsFolder).Take(opts.Max).ToArray();
 			Parallel.ForEach(
 				files,
-				() => Ocr.GetInstance(),
+				() => Ocr.NewInstance(),
 				(file, _, ocr) =>
 				{
 					var artData = Analyze(opts, ocr, file);

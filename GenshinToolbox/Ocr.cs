@@ -7,7 +7,7 @@ namespace GenshinToolbox
 {
 	public static class Ocr
 	{
-		public static IronTesseract GetInstance()
+		public static IronTesseract NewInstance()
 		{
 			var ocr = new IronTesseract();
 			ocr.Configuration.ReadBarCodes = false;
@@ -15,6 +15,9 @@ namespace GenshinToolbox
 			ocr.Language = OcrLanguage.English;
 			return ocr;
 		}
+
+		private static IronTesseract? _instance;
+		public static IronTesseract Instance => _instance ??= NewInstance();
 
 		public static T FindClosest<T>(this IEnumerable<(T, string)> kvs, string result)
 			=> kvs.Select(s => new KeyValuePair<T, string>(s.Item1, s.Item2)).FindClosest(result);

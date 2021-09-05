@@ -21,11 +21,15 @@ namespace GenshinToolbox
 			MuseEngine.Validate();
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions, FisherOptions>(args).MapResult(
+			Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions, FisherOptions, UtilOptions>(args).MapResult(
 				(Func<PlayerOptions, int>)RunPlayer,
 				(Func<CollectOptions, int>)RunCollect,
 				(Func<ArtifactsOptions, int>)RunArtifacts,
 				(Func<FisherOptions, int>)RunFisher,
+				(UtilOptions _) => {
+					ImgMatch.DoStuff();
+					return 0;
+				},
 				errs =>
 				{
 					ConsoleSelector();
@@ -33,7 +37,8 @@ namespace GenshinToolbox
 				});
 		}
 
-		static void ConsoleSelector() {
+		static void ConsoleSelector()
+		{
 			while (true)
 			{
 				Console.Clear();
@@ -90,9 +95,7 @@ namespace GenshinToolbox
 	}
 
 	[Verb("player", HelpText = "")]
-	class PlayerOptions
-	{
-	}
+	class PlayerOptions { }
 
 	[Verb("collect", HelpText = "")]
 	class CollectOptions
@@ -131,4 +134,6 @@ namespace GenshinToolbox
 		public bool AutoCatch => !NoAutoCatch;
 	}
 
+	[Verb("util", HelpText = "")]
+	class UtilOptions { }
 }

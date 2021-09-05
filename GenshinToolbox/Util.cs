@@ -133,10 +133,8 @@ namespace GenshinToolbox
 			controller.SetAxisValue(Xbox360Axis.LeftThumbY, 0);
 		}
 
-		public static Point Add(this Point operand1, Point operand2)
-		{
-			return new Point(operand1.X + operand2.X, operand1.Y + operand2.Y);
-		}
+		public static Point Add(this Point operand1, Point operand2) => new(operand1.X + operand2.X, operand1.Y + operand2.Y);
+		public static Point Sub(this Point operand1, Point operand2) => new(operand1.X - operand2.X, operand1.Y - operand2.Y);
 
 		public static Rectangle AddTop(this Rectangle rect, int add) => new(new(rect.Left, rect.Top + add), rect.Size);
 

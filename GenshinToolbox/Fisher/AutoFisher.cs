@@ -1,6 +1,4 @@
-﻿
-using IronOcr;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -10,9 +8,6 @@ namespace GenshinToolbox.Fisher
 {
 	internal static class AutoFisher
 	{
-		const string FishingCaughtText = "You've got a bite!";
-		static readonly string[] AllTexts = new[] { FishingCaughtText, "Switched to walking", "Switched to running" };
-
 		public static void Run(FisherOptions opt)
 		{
 			RunInternal(opt);
@@ -28,29 +23,25 @@ namespace GenshinToolbox.Fisher
 
 		static void RunInternal(FisherOptions opt)
 		{
-			var ocr = Ocr.GetInstance();
 			var sw = new Stopwatch();
-			bool isOcrReading = false;
 			while (true)
 			{
 				var workTime = sw.ElapsedMilliseconds;
-				var targetWait = isOcrReading ? 400 : Util.Frame;
-				Thread.Sleep(Math.Max(1, targetWait - (int)sw.ElapsedMilliseconds));
+				Thread.Sleep(Math.Max(1, Util.Frame - (int)sw.ElapsedMilliseconds));
 				Console.SetCursorPosition(0, Console.WindowHeight - 1);
 				Console.Write("Work: {0:000}ms  Frame: {1:000}ms               ", workTime, sw.ElapsedMilliseconds);
 				sw.Restart();
 				Console.SetCursorPosition(0, 0);
 				//Console.Clear();
 
-				isOcrReading = false;
-
 				if (!ValidateFishing())
 					continue;
 
 				using var catchImg = Capture.Game(TrackRangeRectAll);
+				using var fastbmp = new FastBitmap(catchImg);
 				if (LastRangeTopOff.HasValue)
 				{
-					if (!BarAssist(catchImg, new Rectangle(0, LastRangeTopOff.Value, TrackRangeWidth, TrackRangeHeigth)))
+					if (!BarAssist(fastbmp, new Rectangle(0, LastRangeTopOff.Value, TrackRangeWidth, TrackRangeHeigth)))
 						LastRangeTopOff = null;
 				}
 				else
@@ -58,7 +49,7 @@ namespace GenshinToolbox.Fisher
 					bool found = false;
 					foreach (var off in TrackRangeTopOff)
 					{
-						if (BarAssist(catchImg, new Rectangle(0, off, TrackRangeWidth, TrackRangeHeigth)))
+						if (BarAssist(fastbmp, new Rectangle(0, off, TrackRangeWidth, TrackRangeHeigth)))
 						{
 							LastRangeTopOff = off;
 							found = true;
@@ -68,8 +59,7 @@ namespace GenshinToolbox.Fisher
 
 					if (!found && opt.AutoCatch)
 					{
-						if (!CatchAssist(ocr, catchImg))
-							isOcrReading = true;
+						CatchAssist(fastbmp);
 					}
 				}
 			}
@@ -91,7 +81,7 @@ namespace GenshinToolbox.Fisher
 				//using var catchImg = new Bitmap(Image.FromFile($"./DbgImgs/fish_match/fish_{cnt:0000}.png")).ToSharedPixelFormat();
 				// var slice = new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth);
 
-				BarAssist(catchImg, slice);
+				BarAssist(new FastBitmap(catchImg), slice);
 				cnt++;
 				Console.ReadKey();
 			}
@@ -106,7 +96,7 @@ namespace GenshinToolbox.Fisher
 
 				try
 				{
-					BarAssist(catchImg, new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth));
+					BarAssist(new FastBitmap(catchImg), new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth));
 				}
 				catch { }
 
@@ -131,7 +121,7 @@ namespace GenshinToolbox.Fisher
 		static int LastRangePos; // Using center here
 		static int LastBarPos;
 
-		public static bool BarAssist(Bitmap catchImg, Rectangle slice)
+		public static bool BarAssist(FastBitmap fastbmp, Rectangle slice)
 		{
 			//Console.SetCursorPosition(0, 0);
 
@@ -142,8 +132,6 @@ namespace GenshinToolbox.Fisher
 
 			#region FindBar
 			MeasureBuffer.AsSpan().Clear();
-
-			using var fastbmp = new FastBitmap(catchImg);
 
 			for (int y = slice.Top; y < slice.Bottom; y++)
 			{
@@ -297,10 +285,8 @@ namespace GenshinToolbox.Fisher
 		}
 
 		static DateTime lastClick = DateTime.MinValue;
-		const int OcrTopOffset = 100;
-		static readonly Rectangle OcrOffset = new(0, OcrTopOffset, TrackRangeWidth, TrackRangeRectAll.Height - OcrTopOffset);
 
-		public static bool CatchAssist(IronTesseract ocr, Bitmap catchImg)
+		public static bool CatchAssist(FastBitmap fastbmp)
 		{
 			var now = DateTime.Now;
 			var onCooldown = lastClick + TimeSpan.FromSeconds(1) > now;
@@ -308,35 +294,18 @@ namespace GenshinToolbox.Fisher
 			if (onCooldown)
 				return true;
 
-			catchImg.ApplyFilter(ImageExt.WhiteFilter, OcrOffset);
+			var conf = ImgMatch.YouGotABite.Match(fastbmp, ImgMatch.YouGotABite.matchRect.Location.Sub(TrackRangeRectAll.Location));
 
-			ocr.Configuration.WhiteListCharacters = FishingCaughtText.Allow();
-			ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
-			ocr.Configuration.TesseractVersion = TesseractVersion.Tesseract5;
-			ocr.Configuration.EngineMode = TesseractEngineMode.LstmOnly;
-			ocr.Language = OcrLanguage.EnglishFast;
-
-			using var Input = new OcrInput(catchImg, OcrOffset);
-			var Result = ocr.Read(Input);
-			var text = Result.Text;
-
-			var acc = Ocr.Lehvenshtein(text, FishingCaughtText);
-
-			if (acc < 5 && !onCooldown)
+			Console.WriteLine("Capture Match: {0:0.00}", conf);
+			if (conf > 0.95)
 			{
 				Util.inp.Mouse.LeftButtonClick();
 				lastClick = now;
 				return true;
 			}
 
-			//Console.SetCursorPosition(0, 10);
-			//Console.WriteLine("DETECTED: {0}               ", text);
-			//Console.WriteLine("DIST WALK: {0}              ", Ocr.Lehvenshtein(text, "Switched to walking"));
-			//Console.WriteLine("DIST FISH: {0}              ", acc);
-
 			return false;
 		}
-
 
 		static readonly Rectangle IsFishingRect = new(1600, 950, 70, 100);
 		static readonly Rectangle MouseRect = new(23, 77, 8, 8);

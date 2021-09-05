@@ -4,14 +4,13 @@ using System.Drawing.Imaging;
 
 namespace GenshinToolbox
 {
-	public unsafe readonly ref struct FastBitmap
+	public unsafe sealed class FastBitmap : IDisposable
 	{
 		private readonly Bitmap _bmp;
 		private readonly BitmapData _data;
 		private readonly byte* _bufferPtr;
-
-		public int Width => _bmp.Width;
-		public int Height => _bmp.Height;
+		public int Width { get; }
+		public int Height { get; }
 
 		public FastBitmap(Bitmap bmp)
 		{
@@ -21,7 +20,9 @@ namespace GenshinToolbox
 			}
 
 			_bmp = bmp;
-			_data = bmp.LockBits(new Rectangle(0, 0, _bmp.Width, _bmp.Height), ImageLockMode.ReadWrite, ImageExt.SharedPixelFormat);
+			Width = bmp.Width;
+			Height = bmp.Height;
+			_data = bmp.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadWrite, ImageExt.SharedPixelFormat);
 			_bufferPtr = (byte*)_data.Scan0.ToPointer();
 		}
 
