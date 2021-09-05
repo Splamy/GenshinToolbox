@@ -31,10 +31,11 @@ namespace GenshinToolbox
 				var rowImg = img.GetRow(y + slice.Y);
 				for (int x = 0; x < row.Length; x++)
 				{
-					if (row[x] == chromaKey)
+					var match = row[x];
+					if (match == chromaKey)
 						continue;
 					sum++;
-					if (rowImg[x + slice.X] == chromaKey) ok++;
+					if (rowImg[x + slice.X] == match) ok++;
 				}
 			}
 			return (float)ok / sum;
@@ -77,7 +78,7 @@ namespace GenshinToolbox
 
 		public static void DoStuff()
 		{
-			using var png = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_03-07-40.png")).ToSharedPixelFormat();
+			using var png = new Bitmap(Image.FromFile(@"E:\_Projects\GenshinToolbox\GenshinToolbox\Matcher\dbg1.png")).ToSharedPixelFormat();
 			var fast = new FastBitmap(png);
 
 			var y = YouGotABite.Match(fast, YouGotABite.matchRect.Location);

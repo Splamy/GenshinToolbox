@@ -28,6 +28,8 @@ namespace GenshinToolbox.Fisher
 			{
 				var workTime = sw.ElapsedMilliseconds;
 				Thread.Sleep(Math.Max(1, Util.Frame - (int)sw.ElapsedMilliseconds));
+				Console.SetCursorPosition(0, 0);
+				Util.WaitForFocus(false);
 				Console.SetCursorPosition(0, Console.WindowHeight - 1);
 				Console.Write("Work: {0:000}ms  Frame: {1:000}ms               ", workTime, sw.ElapsedMilliseconds);
 				sw.Restart();
@@ -237,8 +239,8 @@ namespace GenshinToolbox.Fisher
 			int compareTarget = RangeVelo switch
 			{
 				0 => rangeCenter - MinClickBoost,
-				< 0 => compareTarget = rangeCenter - ((range.width / 4) + Math.Min(absRangeVelo, range.width / 4)),
-				> 0 => compareTarget = rangeCenter + Math.Min(absRangeVelo, range.width / 4) - MinClickBoost,
+				< 0 => rangeCenter - ((range.width / 4) + Math.Min(absRangeVelo, range.width / 4)),
+				> 0 => rangeCenter + Math.Min(absRangeVelo, range.width / 4) - MinClickBoost,
 			};
 
 			//int compareTarget = rangeCenter + Math.Clamp(RangeVelo, -range.width / 2, range.width / 4);

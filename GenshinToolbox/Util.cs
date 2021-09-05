@@ -49,7 +49,7 @@ namespace GenshinToolbox
 		public static bool GenshinHasFocus()
 			=> GetForegroundWindow() == GetProcess()?.MainWindowHandle;
 
-		public static void WaitForFocus()
+		public static void WaitForFocus(bool waitAfterWakeup = true)
 		{
 			if (!GenshinHasFocus())
 			{
@@ -60,8 +60,11 @@ namespace GenshinToolbox
 					Thread.Sleep(100);
 				}
 
-				Console.WriteLine("Resuming task in 500ms");
-				Thread.Sleep(500);
+				if (waitAfterWakeup)
+				{
+					Console.WriteLine("Resuming task in 500ms");
+					Thread.Sleep(500);
+				}
 				_WindowOffset = null;
 			}
 		}
