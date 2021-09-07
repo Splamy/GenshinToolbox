@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -44,7 +45,10 @@ namespace GenshinToolbox.Fisher
 				if (LastRangeTopOff.HasValue)
 				{
 					if (!BarAssist(fastbmp, new Rectangle(0, LastRangeTopOff.Value, TrackRangeWidth, TrackRangeHeigth)))
+					{
 						LastRangeTopOff = null;
+						Util.inp.Mouse.LeftButtonUp();
+					}
 				}
 				else
 				{
@@ -70,20 +74,24 @@ namespace GenshinToolbox.Fisher
 		static void Iterate()
 		{
 			cnt = 109;
-			while (true)
+			foreach (var file in Directory.EnumerateFiles(@"E:\_Projects\GenshinToolbox\GenshinToolbox\bin\Debug\net5.0\DbgImgs\fish_match"))
 			{
 				Console.Clear();
 
-				Console.WriteLine("Fish: {0}", cnt);
+				Console.WriteLine("Fish: {0}", Path.GetFileName(file));
 
-				using var catchImg = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_17-28-58.png")).ToSharedPixelFormat();
-				var slice = TrackRangeRectAll.AddTop(TrackRangeTopOff[1]).SetHeight(TrackRangeHeigth);
+				//				using var catchImg = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_17-28-58.png")).ToSharedPixelFormat();
+				//				var slice = TrackRangeRectAll.AddTop(TrackRangeTopOff[1]).SetHeight(TrackRangeHeigth);
+
+				using var catchImg = new Bitmap(Image.FromFile(file)).ToSharedPixelFormat();
+				var slice = new Rectangle(0, 0, TrackRangeWidth, TrackRangeHeigth);
+
 				//catchImg.Save($"./DbgImgs/fish_current.png");
 
 				//using var catchImg = new Bitmap(Image.FromFile($"./DbgImgs/fish_match/fish_{cnt:0000}.png")).ToSharedPixelFormat();
 				// var slice = new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth);
 
-				BarAssist(new FastBitmap(catchImg), slice);
+				BarAssist(new FastBitmap(catchImg), slice, true);
 				cnt++;
 				Console.ReadKey();
 			}
@@ -114,8 +122,10 @@ namespace GenshinToolbox.Fisher
 		static readonly int[] TrackRangeTopOff = new[] { 0, 47 };
 		static int? LastRangeTopOff = null;
 
-		static readonly Color PissColor = Color.FromArgb(255, 255, 192);
+		static readonly Bgrx32 PissColor = new(255, 255, 192);
+		static readonly int[] RowBuffer = new int[TrackRangeHeigth];
 		static readonly int[] MeasureBuffer = new int[TrackRangeWidth];
+		static readonly int[] SmoothBuffer = new int[TrackRangeWidth];
 
 		static bool found;
 		static int RangeVelo;
@@ -123,7 +133,7 @@ namespace GenshinToolbox.Fisher
 		static int LastRangePos; // Using center here
 		static int LastBarPos;
 
-		public static bool BarAssist(FastBitmap fastbmp, Rectangle slice)
+		public static bool BarAssist(FastBitmap fastbmp, Rectangle slice, bool debug = false)
 		{
 			//Console.SetCursorPosition(0, 0);
 
@@ -137,13 +147,17 @@ namespace GenshinToolbox.Fisher
 
 			for (int y = slice.Top; y < slice.Bottom; y++)
 			{
+				var yi = y - slice.Top;
 				var row = fastbmp.GetRow(y);
 				for (int x = slice.Left; x < Math.Min(slice.Right, row.Length); x++)
 				{
-					int i = x - slice.Left;
+					int xi = x - slice.Left;
 					var p = row[x];
-					if (p.R > 240 && p.G > 210 && (p.B > 30 && p.B < 220))
-						MeasureBuffer[i]++;
+					if (p == PissColor)
+					{
+						MeasureBuffer[xi]++;
+						RowBuffer[yi]++;
+					}
 				}
 			}
 
@@ -160,7 +174,18 @@ namespace GenshinToolbox.Fisher
 			#endregion
 
 			#region FindTargetRange
+			const int medianRadius = 10;
+			var measure = MeasureBuffer.AsSpan();
+			var smooth = SmoothBuffer.AsSpan();
 			var avg = MeasureBuffer.Average();
+
+			for (int i = 0; i < measure.Length; i++)
+				if (measure[i] <= 3)
+					measure[i] = 0;
+
+			for (int i = 0; i < measure.Length - medianRadius; i++)
+				smooth[i] = MeasureBuffer[i..(i + medianRadius)].Max();
+
 			bool tracking = false;
 			int largestBumpStart = 0;
 			int largestBumpLength = 0;
@@ -180,9 +205,9 @@ namespace GenshinToolbox.Fisher
 				}
 			}
 
-			for (int i = 0; i < MeasureBuffer.Length; i++)
+			for (int i = 0; i < smooth.Length; i++)
 			{
-				if (MeasureBuffer[i] < avg)
+				if (smooth[i] < avg)
 				{
 					StopTracking();
 				}
@@ -199,6 +224,9 @@ namespace GenshinToolbox.Fisher
 			}
 
 			StopTracking();
+
+			largestBumpStart = largestBumpStart + medianRadius;
+			largestBumpLength = Math.Max(0, largestBumpLength - (medianRadius * 2));
 			#endregion
 
 			var wasFound = found;
@@ -248,21 +276,24 @@ namespace GenshinToolbox.Fisher
 			//int compareTarget = rangeCenter;
 
 			compareTarget = Math.Clamp(compareTarget, range.start, range.start + range.width);
-			if (!Util.GenshinHasFocus())
+			if (!debug)
 			{
-				Console.WriteLine("Waiting for focus            ");
-				return false;
-			}
+				if (!Util.GenshinHasFocus())
+				{
+					Console.WriteLine("Waiting for focus            ");
+					return false;
+				}
 
-			if (barPos < compareTarget)
-			{
-				Util.inp.Mouse.LeftButtonDown();
-				Console.WriteLine("Down            ");
-			}
-			else
-			{
-				Util.inp.Mouse.LeftButtonUp();
-				Console.WriteLine("Up              ");
+				if (barPos < compareTarget)
+				{
+					Util.inp.Mouse.LeftButtonDown();
+					Console.WriteLine("Down            ");
+				}
+				else
+				{
+					Util.inp.Mouse.LeftButtonUp();
+					Console.WriteLine("Up              ");
+				}
 			}
 
 			var consoleWidth = Console.WindowWidth;

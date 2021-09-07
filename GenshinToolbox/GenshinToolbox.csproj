@@ -5,17 +5,10 @@
     <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
-    <PublishReadyToRun>false</PublishReadyToRun>
-    <PublishSingleFile>true</PublishSingleFile>
-    <PublishTrimmed>true</PublishTrimmed>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
     <None Remove="Matcher\YouGotABite.png" />
     <EmbeddedResource Include="Matcher\YouGotABite.png" />
   </ItemGroup>
@@ -23,7 +16,7 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="InputSimulator" Version="1.0.4" />
-    <PackageReference Include="IronOcr" Version="2021.6.0" />
+    <PackageReference Include="IronOcr" Version="2021.9.0" />
     <PackageReference Include="Nefarius.ViGEm.Client" Version="1.17.178" />
     <PackageReference Include="Roslynator.Analyzers" Version="3.2.2">
       <PrivateAssets>all</PrivateAssets>
