@@ -42,41 +42,27 @@ namespace GenshinToolbox.Fisher
 
 				using var catchImg = Capture.Game(TrackRangeRectAll);
 				using var fastbmp = new FastBitmap(catchImg);
-				if (LastRangeTopOff.HasValue)
-				{
-					if (!BarAssist(fastbmp, new Rectangle(0, LastRangeTopOff.Value, TrackRangeWidth, TrackRangeHeigth)))
-					{
-						LastRangeTopOff = null;
-						Util.inp.Mouse.LeftButtonUp();
-					}
-				}
-				else
-				{
-					bool found = false;
-					foreach (var off in TrackRangeTopOff)
-					{
-						if (BarAssist(fastbmp, new Rectangle(0, off, TrackRangeWidth, TrackRangeHeigth)))
-						{
-							LastRangeTopOff = off;
-							found = true;
-							break;
-						}
-					}
 
-					if (!found && opt.AutoCatch)
-					{
+				var wasFound = found;
+				bool newFound = BarAssist(fastbmp);
+
+				if (!newFound)
+				{
+					if (wasFound)
+						Util.inp.Mouse.LeftButtonUp();
+					if (opt.AutoCatch)
 						CatchAssist(fastbmp);
-					}
 				}
 			}
 		}
 
 		static void Iterate()
 		{
-			cnt = 109;
 			foreach (var file in Directory.EnumerateFiles(@"E:\_Projects\GenshinToolbox\GenshinToolbox\bin\Debug\net5.0\DbgImgs\fish_match"))
 			{
 				Console.Clear();
+
+				//const string file = @"D:\MEGA\Pictures\Puush\2021-09\AnotherBar.png";
 
 				Console.WriteLine("Fish: {0}", Path.GetFileName(file));
 
@@ -84,15 +70,16 @@ namespace GenshinToolbox.Fisher
 				//				var slice = TrackRangeRectAll.AddTop(TrackRangeTopOff[1]).SetHeight(TrackRangeHeigth);
 
 				using var catchImg = new Bitmap(Image.FromFile(file)).ToSharedPixelFormat();
-				var slice = new Rectangle(0, 0, TrackRangeWidth, TrackRangeHeigth);
+				//var slice = new Rectangle(Point.Empty, TrackRangeRectAll.Size);
 
 				//catchImg.Save($"./DbgImgs/fish_current.png");
 
 				//using var catchImg = new Bitmap(Image.FromFile($"./DbgImgs/fish_match/fish_{cnt:0000}.png")).ToSharedPixelFormat();
 				// var slice = new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth);
 
-				BarAssist(new FastBitmap(catchImg), slice, true);
-				cnt++;
+				using var fastImg = new FastBitmap(catchImg);
+				//fastImg.SetWindow(TrackRangeRectAll);
+				BarAssist(fastImg, true);
 				Console.ReadKey();
 			}
 		}
@@ -106,7 +93,7 @@ namespace GenshinToolbox.Fisher
 
 				try
 				{
-					BarAssist(new FastBitmap(catchImg), new Rectangle(0, TrackRangeTopOff[0], TrackRangeWidth, TrackRangeHeigth));
+					BarAssist(new FastBitmap(catchImg));
 				}
 				catch { }
 
@@ -116,16 +103,12 @@ namespace GenshinToolbox.Fisher
 
 		static int cnt;
 
-		static readonly Rectangle TrackRangeRectAll = new(719, 100, TrackRangeWidth, 140);
+		static readonly Rectangle TrackRangeRectAll = new(719, 60, TrackRangeWidth, 200);
 		const int TrackRangeWidth = 489;
-		const int TrackRangeHeigth = 30;
-		static readonly int[] TrackRangeTopOff = new[] { 0, 47 };
-		static int? LastRangeTopOff = null;
 
-		static readonly Bgrx32 PissColor = new(255, 255, 192);
-		static readonly int[] RowBuffer = new int[TrackRangeHeigth];
+		static readonly Bgrx32 PissColorA = new(255, 255, 192);
+		static readonly Bgrx32 PissColorB = new(255, 255, 193);
 		static readonly int[] MeasureBuffer = new int[TrackRangeWidth];
-		static readonly int[] SmoothBuffer = new int[TrackRangeWidth];
 
 		static bool found;
 		static int RangeVelo;
@@ -133,8 +116,14 @@ namespace GenshinToolbox.Fisher
 		static int LastRangePos; // Using center here
 		static int LastBarPos;
 
-		public static bool BarAssist(FastBitmap fastbmp, Rectangle slice, bool debug = false)
+		public static bool BarAssist(FastBitmap fastbmp, bool debug = false)
 		{
+			static bool NotFound()
+			{
+				Console.WriteLine("No bar found                          ");
+				found = false;
+				return false;
+			}
 			//Console.SetCursorPosition(0, 0);
 
 			//using var img = new Bitmap(Image.FromFile(@"D:\MEGA\Pictures\Puush\2021-09\GenshinImpact_2021-09-02_03-07-50.png"));
@@ -142,49 +131,83 @@ namespace GenshinToolbox.Fisher
 			//using var catchImg = Capture.Game(TrackBarRect);
 			//catchImg.Save($"./DbgImgs/fish_current.png");
 
-			#region FindBar
-			MeasureBuffer.AsSpan().Clear();
+			var strideCols = MeasureBuffer.AsSpan();
+			strideCols.Clear();
 
-			for (int y = slice.Top; y < slice.Bottom; y++)
+			#region FindRegionHeight
+			int minFound = fastbmp.Height;
+			int maxFound = 0;
+			const int over = 8 + 24;
+
+			for (int y = 0; y < fastbmp.Height; y++)
 			{
-				var yi = y - slice.Top;
+				var row = fastbmp.GetRow(y);
+				var rowCnt = 0;
+				for (int x = 0; x < row.Length; x++)
+				{
+					var p = row[x];
+					if (p == PissColorB)
+					{
+						rowCnt++;
+						row[x] = PissColorA;
+					}
+					else if (p == PissColorA)
+					{
+						rowCnt++;
+					}
+				}
+				if (rowCnt > over)
+				{
+					minFound = Math.Min(minFound, y);
+					maxFound = Math.Max(maxFound, y);
+				}
+			}
+
+			minFound -= 4;
+			maxFound += 4;
+			var slice = new Rectangle(0, minFound, TrackRangeWidth, Math.Max(0, maxFound - minFound));
+			#endregion
+
+			if (slice.Height < 5)
+				return NotFound();
+
+			#region FindBar
+			for (int y = slice.Top; y < Math.Min(slice.Bottom, fastbmp.Height); y++)
+			{
 				var row = fastbmp.GetRow(y);
 				for (int x = slice.Left; x < Math.Min(slice.Right, row.Length); x++)
 				{
-					int xi = x - slice.Left;
+					var xi = x - slice.Left;
 					var p = row[x];
-					if (p == PissColor)
+					if (p == PissColorA)
 					{
-						MeasureBuffer[xi]++;
-						RowBuffer[yi]++;
+						strideCols[xi]++;
 					}
 				}
 			}
 
-			int bestBarPosRating = 0;
-			int bestBarPos = 0;
-			for (int x = 0; x < MeasureBuffer.Length; x++)
-			{
-				if (MeasureBuffer[x] > bestBarPosRating)
-				{
-					bestBarPosRating = MeasureBuffer[x];
-					bestBarPos = x;
-				}
-			}
+			var (bestBarPos, bestBarPosRating) = strideCols.MaxIndex();
 			#endregion
+
+			if (bestBarPosRating == 0)
+				return NotFound();
 
 			#region FindTargetRange
 			const int medianRadius = 10;
-			var measure = MeasureBuffer.AsSpan();
-			var smooth = SmoothBuffer.AsSpan();
-			var avg = MeasureBuffer.Average();
+			var avg = (int)MeasureBuffer.Average();
 
-			for (int i = 0; i < measure.Length; i++)
-				if (measure[i] <= 3)
-					measure[i] = 0;
+			for (int i = 0; i < strideCols.Length; i++)
+			{
+				if (strideCols[i] >= avg)
+					continue;
+				if (i > 0 && strideCols[i - 1] > 0)
+					continue;
+				if (i < strideCols.Length - 1 && strideCols[i + 1] >= avg)
+					continue;
+				strideCols[i] = 0;
+			}
 
-			for (int i = 0; i < measure.Length - medianRadius; i++)
-				smooth[i] = MeasureBuffer[i..(i + medianRadius)].Max();
+			strideCols.MedianFilter(medianRadius);
 
 			bool tracking = false;
 			int largestBumpStart = 0;
@@ -205,9 +228,9 @@ namespace GenshinToolbox.Fisher
 				}
 			}
 
-			for (int i = 0; i < smooth.Length; i++)
+			for (int i = 0; i < strideCols.Length; i++)
 			{
-				if (smooth[i] < avg)
+				if (strideCols[i] == 0)
 				{
 					StopTracking();
 				}
@@ -225,17 +248,15 @@ namespace GenshinToolbox.Fisher
 
 			StopTracking();
 
-			largestBumpStart = largestBumpStart + medianRadius;
+			largestBumpStart += medianRadius;
 			largestBumpLength = Math.Max(0, largestBumpLength - (medianRadius * 2));
 			#endregion
 
+			if (largestBumpLength < 30)
+				return NotFound();
+
+			//LastSlice = newSlice;
 			var wasFound = found;
-			if (bestBarPosRating == 0 || largestBumpLength < 30)
-			{
-				Console.WriteLine("No bar found                          ");
-				found = false;
-				return false;
-			}
 			found = true;
 			//Console.WriteLine("Found                         ");
 			//return;
@@ -266,9 +287,9 @@ namespace GenshinToolbox.Fisher
 
 			int compareTarget = RangeVelo switch
 			{
-				0 => rangeCenter - MinClickBoost,
-				< 0 => rangeCenter - ((range.width / 4) + Math.Min(absRangeVelo, range.width / 4)),
-				> 0 => rangeCenter + Math.Min(absRangeVelo, range.width / 4) - MinClickBoost,
+				0 => rangeCenter - (MinClickBoost / 2),
+				< 0 => rangeCenter - absClampRangeVelo - (range.width / 4),
+				> 0 => rangeCenter + absClampRangeVelo - (MinClickBoost / 2),
 			};
 
 			//int compareTarget = rangeCenter + Math.Clamp(RangeVelo, -range.width / 2, range.width / 4);

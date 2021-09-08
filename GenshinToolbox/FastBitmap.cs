@@ -9,8 +9,11 @@ namespace GenshinToolbox
 		private readonly Bitmap _bmp;
 		private readonly BitmapData _data;
 		private readonly byte* _bufferPtr;
-		public int Width { get; }
-		public int Height { get; }
+		private readonly int RawWidth;
+		private readonly int RawHeigth;
+		private Rectangle window;
+		public int Width => window.Width;
+		public int Height => window.Height;
 
 		public FastBitmap(Bitmap bmp)
 		{
@@ -20,23 +23,26 @@ namespace GenshinToolbox
 			}
 
 			_bmp = bmp;
-			Width = bmp.Width;
-			Height = bmp.Height;
-			_data = bmp.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadWrite, ImageExt.SharedPixelFormat);
+			RawWidth = _bmp.Width;
+			RawHeigth = _bmp.Height;
+			window = new Rectangle(0, 0, RawWidth, RawHeigth);
+			_data = bmp.LockBits(window, ImageLockMode.ReadWrite, ImageExt.SharedPixelFormat);
 			_bufferPtr = (byte*)_data.Scan0.ToPointer();
 		}
 
 		public Span<Bgrx32> GetRow(int y)
 		{
-			var row = _bufferPtr + (y * _data.Stride);
-			return new Span<Bgrx32>(row, Width);
+			if (y < 0 || y >= Height)
+				throw new ArgumentOutOfRangeException(nameof(y));
+			var row = _bufferPtr + ((y + window.Y) * _data.Stride);
+			return new Span<Bgrx32>(row, RawWidth).Slice(window.X, Width);
 		}
 
 		public Bgrx32* this[int x, int y]
 		{
 			get
 			{
-				var pixel = _bufferPtr + (y * _data.Stride) + (x * ImageExt.SharedBPP);
+				var pixel = _bufferPtr + ((y + window.Y) * _data.Stride) + ((x + window.X) * ImageExt.SharedBPP);
 				return (Bgrx32*)pixel;
 			}
 		}
@@ -44,6 +50,22 @@ namespace GenshinToolbox
 		public void Dispose()
 		{
 			_bmp.UnlockBits(_data);
+		}
+
+		public void SetWindow(Rectangle window)
+		{
+			if (window.Left < 0 || window.Right > Width
+				|| window.Top < 0 || window.Bottom > Height)
+			{
+				throw new ArgumentOutOfRangeException(nameof(window));
+			}
+
+			this.window = window;
+		}
+
+		public void ResetWindow()
+		{
+			this.window = new Rectangle(0, 0, _bmp.Width, _bmp.Height);
 		}
 
 		// ********

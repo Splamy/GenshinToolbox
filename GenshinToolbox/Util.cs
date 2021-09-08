@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Threading;
 using WindowsInput;
 using WindowsInput.Native;
+using JM.LinqFaster;
 using static GenshinToolbox.NativeMethods;
 
 namespace GenshinToolbox
@@ -148,6 +149,27 @@ namespace GenshinToolbox
 					Math.Min(rect.Width - inner.Left, inner.Width),
 					Math.Min(rect.Height - inner.Top, inner.Height)
 				));
+
+		public static (int pos, int value) MaxIndex(this Span<int> data)
+		{
+			int maxValue = 0;
+			int maxPos = 0;
+			for (int x = 0; x < data.Length; x++)
+			{
+				if (data[x] > maxValue)
+				{
+					maxValue = data[x];
+					maxPos = x;
+				}
+			}
+			return (maxPos, maxValue);
+		}
+
+		public static void MedianFilter(this Span<int> data, int range)
+		{
+			for (int i = 0; i < data.Length - range; i++)
+				data[i] = data[i..(i + range)].MaxF();
+		}
 	}
 
 	public enum AxisDir

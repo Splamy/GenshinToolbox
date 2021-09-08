@@ -83,8 +83,6 @@ namespace GenshinToolbox
 
 			var y = YouGotABite.Match(fast, YouGotABite.matchRect.Location);
 
-			return;
-
 			var minrect = Analyze(fast, new Rectangle(800, 200, 330, 40), px => px == Bgrx32.White);
 			fast.Dispose();
 

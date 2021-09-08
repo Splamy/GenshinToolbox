@@ -17,6 +17,7 @@
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="InputSimulator" Version="1.0.4" />
     <PackageReference Include="IronOcr" Version="2021.9.0" />
+    <PackageReference Include="JM.LinqFaster" Version="1.1.2" />
     <PackageReference Include="Nefarius.ViGEm.Client" Version="1.17.178" />
     <PackageReference Include="Roslynator.Analyzers" Version="3.2.2">
       <PrivateAssets>all</PrivateAssets>

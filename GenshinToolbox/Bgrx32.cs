@@ -40,6 +40,8 @@ namespace GenshinToolbox
 		public static bool operator !=(Bgrx32 left, Bgrx32 right) => !(left == right);
 		public override int GetHashCode() => unchecked((int)All);
 
+		public byte Lightness => unchecked((byte)((0.299f * R) + (0.587f * G) + (0.114f * B)));
+
 		public static Bgrx32 FromColor(Color c) => new(c.R, c.G, c.B);
 
 		public override string? ToString() => $"{R:X2}{G:X2}{B:X2}";

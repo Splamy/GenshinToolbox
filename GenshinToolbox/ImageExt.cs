@@ -18,34 +18,6 @@ namespace GenshinToolbox
 			fastbmp.ApplyFilter(transform, slice);
 		}
 
-		internal static unsafe void IterDemo(Bitmap bmp)
-		{
-			int w = bmp.Width;
-			int h = bmp.Height;
-
-			if (bmp.PixelFormat != SharedPixelFormat)
-			{
-				throw new ArgumentException($"pixel format should be {SharedPixelFormat}!", nameof(bmp));
-			}
-
-			BitmapData data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadWrite, bmp.PixelFormat);
-
-			try
-			{
-				byte* sourcePtrBase = (byte*)data.Scan0;
-				for (int y = 0; y < h; y++)
-				{
-					byte* sourcePtr = sourcePtrBase + (data.Stride * y);
-					var rbgArr = new Span<byte>(sourcePtr, w * SharedBPP);
-
-				}
-			}
-			finally
-			{
-				bmp.UnlockBits(data);
-			}
-		}
-
 		public static Bitmap CropOut(this Bitmap img, Rectangle rect)
 		{
 			var crop = new Bitmap(rect.Width, rect.Height, SharedPixelFormat);
@@ -115,7 +87,7 @@ namespace GenshinToolbox
 			if (px.R + px.G + px.B > 180 * 3)
 			{
 				// About [229-255]
-				var white = (int)((0.299f * px.R) + (0.587f * px.G) + (0.114f * px.B));
+				var white = px.Lightness;
 				// About [0-26]
 				var black = 255 - white;
 				//var scaled = (byte)(black * 9);
@@ -129,9 +101,6 @@ namespace GenshinToolbox
 		}
 
 		public static void ExactWhiteFilter(ref Bgrx32 px) => px = px == Bgrx32.White ? Bgrx32.White : Bgrx32.Black;
-
-		public static bool RgbEq(this Color color, Color other) =>
-			color.R == other.R && color.G == other.G && color.B == other.B;
 
 		public static bool RgbIn(this Color color, Color min, Color max) =>
 			color.R >= min.R && color.G >= min.G && color.B >= min.B &&
