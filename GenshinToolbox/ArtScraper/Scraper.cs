@@ -123,13 +123,21 @@ namespace GenshinToolbox.ArtScraper
 		const string CharsSet = ":";
 
 		const string DbgFolder = "DbgImgs";
-		const string ArtsFolder = "ArtImgs";
+		static readonly string ArtsFolder = Path.Join("..", "..", "ArtImgs");
 
 		public static void Run(ArtifactsOptions opts)
 		{
 			using var c = new ViGEmClient();
 			var x360 = c.CreateXbox360Controller();
-			x360.Connect();
+			bool connected = false;
+			void ConnectController()
+			{
+				if (!connected)
+				{
+					x360.Connect();
+					connected = true;
+				}
+			}
 
 			while (true)
 			{
@@ -139,58 +147,64 @@ namespace GenshinToolbox.ArtScraper
 				Console.WriteLine("3. Switch game to controller input");
 				Console.WriteLine("4. Switch game to kdb+mouse input");
 				Console.WriteLine("5. Navigate to artifacts (make sure game is in controller mode)");
+				Console.WriteLine("6. Only connect controller");
 
 				switch (Console.ReadKey().KeyChar)
 				{
 				case '1':
+					ConnectController();
 					CaptureArts(opts, x360);
 					break;
 				case '2':
-					Console.Write("Min level (Default: >=0):");
+					Console.Write("Min level (Default: >=1):");
 					if (!int.TryParse(Console.ReadLine()!.Trim(), out var minLevel))
-						minLevel = 0;
-					Console.Write("Min stars (Default: >=5):");
+						minLevel = 1;
+					Console.Write("Min stars (Default: >=4):");
 					if (!int.TryParse(Console.ReadLine()!.Trim(), out var minStars))
-						minStars = 5;
-					Console.Write("Count (Default: 1000):");
+						minStars = 4;
+					Console.Write("Count (Default: All):");
 					if (!int.TryParse(Console.ReadLine()!.Trim(), out var amount))
-						minStars = 1000;
+						amount = Directory.EnumerateFiles(ArtsFolder).Count();
+					Console.Write("Keep at least 1 unique (Default: false) [Y/_]:");
+					var keepUnique = Console.ReadKey().Key == ConsoleKey.Y;
+					Console.WriteLine("");
+					Console.WriteLine("Starting...");
 
 					opts.MinLevel = minLevel;
 					opts.MinStars = minStars;
 					opts.Max = amount;
-					if (opts.Debug && opts.Max > 1)
-					{
-						Console.WriteLine("Multiple artifacts not supported with debug flag enabled");
-						Thread.Sleep(2000);
-						break;
-					}
+					opts.KeepUnique = keepUnique;
 					AnalyzeAll(opts);
 					break;
 				case '3':
+					ConnectController();
 					SwitchToController();
 					break;
 				case '4':
+					ConnectController();
 					SwitchToKbdMouse(x360);
 					break;
 				case '5':
-					Console.WriteLine("Not implemented");
-					Thread.Sleep(2000);
+					ConnectController();
+					NavToArtifacts(x360);
+					break;
+				case '6':
+					ConnectController();
 					break;
 				}
-
 			}
 		}
 
 		// Kbd / Controller switching utils
 
 		const int Timing = 1000;
+		const int FastTiming = 200;
 
 		private static void SwitchToController()
 		{
 			Util.Focus();
 
-			for (int i = 0; i < 5; i++)
+			for (int i = 0; i < 4; i++)
 			{
 				Util.PressKey(VirtualKeyCode.ESCAPE);
 				Thread.Sleep(Timing);
@@ -217,28 +231,11 @@ namespace GenshinToolbox.ArtScraper
 			Thread.Sleep(Timing);
 		}
 
-		private static void EnterMenuWithController(IXbox360Controller x360)
-		{
-			Util.Focus();
-
-			for (int i = 0; i < 5; i++)
-			{
-				x360.PressButton(Xbox360Button.A);
-				Thread.Sleep(Timing);
-			}
-
-			//TODO 
-		}
-
 		private static void SwitchToKbdMouse(IXbox360Controller x360)
 		{
 			Util.Focus();
 
-			for (int i = 0; i < 5; i++)
-			{
-				x360.PressButton(Xbox360Button.A);
-				Thread.Sleep(Timing);
-			}
+			ControllerExitOut(x360);
 
 			x360.PressButton(Xbox360Button.Start);
 			Thread.Sleep(Timing);
@@ -268,6 +265,15 @@ namespace GenshinToolbox.ArtScraper
 			Thread.Sleep(Timing);
 		}
 
+		private static void ControllerExitOut(IXbox360Controller x360)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				x360.PressButton(Xbox360Button.A);
+				Thread.Sleep(Timing);
+			}
+		}
+
 		private static bool IsMenuOpen()
 		{
 			var cmin = Color.FromArgb(73, 83, 102);
@@ -277,18 +283,72 @@ namespace GenshinToolbox.ArtScraper
 			return open.MatchesAll(px => px.RgbIn(cmin, cmax));
 		}
 
+		private static void NavToArtifacts(IXbox360Controller x360)
+		{
+			Util.Focus();
+
+			ControllerExitOut(x360);
+
+			x360.SetButtonState(Xbox360Button.LeftShoulder, true);
+			Thread.Sleep(FastTiming);
+			x360.SetAxisValue(Xbox360Axis.RightThumbX, short.MaxValue);
+			Thread.Sleep(FastTiming);
+			x360.SetButtonState(Xbox360Button.LeftShoulder, false);
+			x360.SetAxisValue(Xbox360Axis.RightThumbX, 0);
+			Thread.Sleep(FastTiming);
+
+			Console.WriteLine("Press [Left] or [Right] {n} times to move though {n} tabs. [Enter] to run.");
+
+			int move = 0; // -1 = left | +1 = right
+			bool done = false;
+			var (_, top) = Console.GetCursorPosition();
+			while (!done)
+			{
+				switch (Console.ReadKey().Key)
+				{
+				case ConsoleKey.LeftArrow:
+					move--;
+					break;
+
+				case ConsoleKey.RightArrow:
+					move++;
+					break;
+
+				case ConsoleKey.Enter:
+					done = true;
+					break;
+				}
+
+				Console.SetCursorPosition(0, top);
+				Console.WriteLine("Moving {0}{1}", move, move switch { 0 => "           ", > 0 => " to right", < 0 => " to left" });
+			}
+
+			Util.Focus();
+			Thread.Sleep(FastTiming);
+
+			for (int i = 0; i < Math.Abs(move); i++)
+			{
+				var btn = move > 0 ? Xbox360Button.RightShoulder : Xbox360Button.LeftShoulder;
+				x360.SetButtonState(btn, true);
+				Thread.Sleep(FastTiming);
+				x360.SetButtonState(btn, false);
+				Thread.Sleep(FastTiming);
+			}
+		}
+
 		// *****************************
 
 		private static void CaptureArts(ArtifactsOptions opts, IXbox360Controller x360)
 		{
+			Directory.Delete(ArtsFolder, true);
+			Directory.CreateDirectory(ArtsFolder);
+
 			Util.Focus();
 
 			//EnterMenuWithController(x360);
 
 			int index = 0;
 			bool hasMoved = true;
-
-			var alignZero = new string('0', (int)Math.Floor(Math.Log10(Math.Min(opts.Max, 1000))) + 1);
 
 			while (index < opts.Max)
 			{
@@ -301,9 +361,8 @@ namespace GenshinToolbox.ArtScraper
 
 					using var cap = Capture.Game(ArtifactScanRect);
 					hasMoved = false;
-					Directory.CreateDirectory(ArtsFolder);
-					var saveFile = Path.Combine(ArtsFolder, $"Art{index.ToString(alignZero)}.png");
-					File.Delete(saveFile);
+					var saveFile = Path.Combine(ArtsFolder, $"Art{index:000}.png");
+					try { File.Delete(saveFile); } catch { }
 					cap.Save(saveFile, ImageFormat.Png);
 				}
 
@@ -345,7 +404,7 @@ namespace GenshinToolbox.ArtScraper
 			if (opts.Debug)
 				Directory.CreateDirectory(DbgFolder);
 
-			//Analyze(opts, GetOcrInstance(), Path.Combine(ArtsFolder, $"Art{13}.png"));
+			//Analyze(opts, Ocr.NewInstance(), Path.Combine(ArtsFolder, $"Art{93:000}.png"));
 			//Analyze(opts, GetOcrInstance(), Path.Combine(ArtsFolder, $"Art{0}.png"));
 
 			var artList = new ConcurrentBag<ArtData>();
@@ -354,6 +413,7 @@ namespace GenshinToolbox.ArtScraper
 			var files = Directory.EnumerateFiles(ArtsFolder).Take(opts.Max).ToArray();
 			Parallel.ForEach(
 				files,
+				new ParallelOptions() { MaxDegreeOfParallelism = opts.Debug ? 1 : -1 },
 				() => Ocr.NewInstance(),
 				(file, _, ocr) =>
 				{
@@ -365,17 +425,28 @@ namespace GenshinToolbox.ArtScraper
 				(_) => { }
 			);
 
+			var uniqueList = new HashSet<(Slot slot, ArtSet set, Stat main)>();
+			var filteredArts = new List<ArtData>();
 			var collisionList = new Dictionary<string, int>();
-			var genshOptDict = artList.Select(x =>
+			foreach (var art in artList.OrderByDescending(x => x.Level).ThenByDescending(x => x.Stars))
 			{
-				var id = GetHashString($"{x.Main}{string.Join(",", x.SubStats)}{x.Slot}{x.Stars}{x.Level}");
+				// Add Artifact to result if either it fits the filter, or is unique.
+				var artGroup = (art.Slot, art.ArtSet, art.Main.Type);
+				if ((art.Stars < opts.MinStars || art.Level < opts.MinLevel) && uniqueList.Contains(artGroup))
+					continue;
+				uniqueList.Add(artGroup);
+
+				// Add a unique string to each artifact (Probably not necessary anymore but good for finding arts simpler)
+				var id = GetHashString($"{art.Main}{string.Join(",", art.SubStats)}{art.Slot}{art.Stars}{art.Level}");
 				var cnt = collisionList.GetValueOrDefault(id, 0);
 				collisionList[id] = cnt + 1;
+				art.Id = $"artifact_{id}_{cnt}";
 
-				x.Id = $"artifact_{id}_{cnt}";
-				return x;
-			}).ToDictionary(x => x.Id);
-			var text = JsonSerializer.Serialize(genshOptDict, new JsonSerializerOptions
+				filteredArts.Add(art);
+			}
+
+			var finalJsonArr = filteredArts.OrderBy(art => art.FileName).ToArray();
+			var text = JsonSerializer.Serialize(finalJsonArr, new JsonSerializerOptions
 			{
 				WriteIndented = true,
 				Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -399,8 +470,16 @@ namespace GenshinToolbox.ArtScraper
 				using var crop = img.CropOut(area);
 				if (postprocess != null) crop.ApplyFilter(postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
-				using var Input = new OcrInput(crop);
+				using var ocrCrop = crop.ToOcrPixelFormat();
+				using var Input = new OcrInput(ocrCrop);
+				ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
 				var Result = ocr.Read(Input);
+				//ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleBlock;
+				//var Result2 = ocr.Read(Input);
+				//ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.RawLine; // clunky
+				//var Result3 = ocr.Read(Input);
+				//ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SparseText;
+				//var Result4 = ocr.Read(Input);
 				var text = Result.Text;
 				var guess = filter(text);
 				Console.WriteLine("For {0}: got '{1}', reading {2}", dbgName, text, guess);
@@ -422,10 +501,8 @@ namespace GenshinToolbox.ArtScraper
 				}
 			}
 
-			if (stars < opts.MinStars)
+			if (stars < opts.MinStars && !opts.KeepUnique)
 				return null;
-
-			ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
 
 			ocr.Configuration.WhiteListCharacters = (Numbers + "+").Allow();
 			var levelNum = ProcessStat(
@@ -435,14 +512,14 @@ namespace GenshinToolbox.ArtScraper
 				text => int.TryParse(text, out var num) ? num : -1
 			);
 
-			if (levelNum < opts.MinLevel)
+			if (levelNum < opts.MinLevel && !opts.KeepUnique)
 				return null;
 
 			ocr.Configuration.WhiteListCharacters = SlotNames.Values.Allow();
 			Slot slot = ProcessStat(
 				"subName",
 				Areas[1],
-				ImageExt.WhiteScaleFilter,
+				ImageExt.WhiteFilter,
 				text => SlotNames.FindClosest(text)
 			);
 			var slotData = StatCategory[slot];
@@ -459,7 +536,7 @@ namespace GenshinToolbox.ArtScraper
 			string mainStatValueText = ProcessStat(
 				"mainStatValue",
 				Areas[3],
-				ImageExt.WhiteScaleFilter,
+				ImageExt.WhiteFilter,
 				text => text
 			);
 			mainStat = ModStatWithPercent(mainStat, mainStatValueText, slotData.main);
@@ -488,7 +565,7 @@ namespace GenshinToolbox.ArtScraper
 				var substat = ProcessStat(
 					$"subStat{i}",
 					Areas[6 + i],
-					ImageExt.BlackFilter,
+					ImageExt.BlackScaleFilter,
 					text =>
 					{
 						if (text.Contains("+"))
@@ -646,7 +723,7 @@ namespace GenshinToolbox.ArtScraper
 			writer.WriteString("id", val.Id);
 			writer.WriteString("_file", val.FileName);
 			writer.WriteString("setKey", val.ArtSet.ToString());
-			writer.WriteNumber("numStars", val.Stars);
+			writer.WriteNumber("rarity", val.Stars);
 			writer.WriteString("slotKey", val.Slot.ToString().ToLowerInvariant());
 			writer.WriteNumber("level", val.Level);
 			writer.WriteString("mainStatKey", StatToGenshOpt(val.Main.Type));

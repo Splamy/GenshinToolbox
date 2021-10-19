@@ -124,6 +124,8 @@ namespace GenshinToolbox
 		public int MinLevel { get; set; }
 		[Option('s', "minstars", Required = false, Default = 0)]
 		public int MinStars { get; set; }
+		[Option('u', "keep-unique", Required = false, Default = false)]
+		public bool KeepUnique { get; set; }
 	}
 
 	[Verb("fisher", HelpText = "")]

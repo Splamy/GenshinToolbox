@@ -12,7 +12,7 @@ namespace GenshinToolbox
 			var ocr = new IronTesseract();
 			ocr.Configuration.ReadBarCodes = false;
 			ocr.Configuration.RenderSearchablePdfsAndHocr = false;
-			ocr.Language = OcrLanguage.English;
+			ocr.Language = OcrLanguage.EnglishBest;
 			return ocr;
 		}
 

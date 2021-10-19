@@ -9,6 +9,7 @@ namespace GenshinToolbox
 
 	public static class ImageExt
 	{
+		public const PixelFormat OcrPixelFormat = PixelFormat.Format32bppArgb;
 		public const PixelFormat SharedPixelFormat = PixelFormat.Format32bppRgb;
 		public const int SharedBPP = 4;
 
@@ -20,7 +21,7 @@ namespace GenshinToolbox
 
 		public static Bitmap CropOut(this Bitmap img, Rectangle rect)
 		{
-			var crop = new Bitmap(rect.Width, rect.Height, SharedPixelFormat);
+			var crop = new Bitmap(rect.Width, rect.Height, img.PixelFormat);
 			using var g = Graphics.FromImage(crop);
 			g.SmoothingMode = SmoothingMode.None;
 			g.PixelOffsetMode = PixelOffsetMode.Default;
@@ -34,7 +35,7 @@ namespace GenshinToolbox
 		public static Bitmap ResizeTo(this Image image, int width, int height)
 		{
 			var destRect = new Rectangle(0, 0, width, height);
-			var destImage = new Bitmap(width, height, SharedPixelFormat);
+			var destImage = new Bitmap(width, height, image.PixelFormat);
 
 			destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
 
@@ -73,6 +74,18 @@ namespace GenshinToolbox
 			return clone;
 		}
 
+		public static Bitmap ToOcrPixelFormat(this Bitmap img)
+		{
+			if (img.PixelFormat == OcrPixelFormat)
+				return img;
+
+			using var _img = img;
+			var clone = new Bitmap(img.Width, img.Height, OcrPixelFormat);
+			using var g = Graphics.FromImage(clone);
+			g.DrawImage(img, new Rectangle(0, 0, clone.Width, clone.Height));
+			return clone;
+		}
+
 		/// <summary>Filter almost White to Black; Rest White</summary>
 		public static void WhiteFilter(ref Bgrx32 px) => px = px.R + px.G + px.B > 180 * 3 ? Bgrx32.Black : Bgrx32.White;
 		/// <summary>Filter lighter than Gray to Black; Rest White</summary>
@@ -82,12 +95,31 @@ namespace GenshinToolbox
 		/// <summary>Green-ish to Black; Rest White</summary>
 		public static void GreenFilter(ref Bgrx32 px) => px = px.G > 128 && px.R + px.B < 128 * 2 ? Bgrx32.Black : Bgrx32.White;
 
+		public static void BlackScaleFilter(ref Bgrx32 px)
+		{
+			var black = px.Lightness;
+			if (black < 128)
+			{
+				px = new(black, black, black);
+			}
+			else
+			{
+				px = Bgrx32.White;
+			}
+		}
+
+		public static void GrayScaleFilter(ref Bgrx32 px)
+		{
+			var black = px.Lightness;
+			px = new(black, black, black);
+		}
+
 		public static void WhiteScaleFilter(ref Bgrx32 px)
 		{
-			if (px.R + px.G + px.B > 180 * 3)
+			var white = px.Lightness;
+			if (white > 128)
 			{
 				// About [229-255]
-				var white = px.Lightness;
 				// About [0-26]
 				var black = 255 - white;
 				//var scaled = (byte)(black * 9);
