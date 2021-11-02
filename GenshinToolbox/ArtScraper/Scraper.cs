@@ -349,6 +349,7 @@ namespace GenshinToolbox.ArtScraper
 
 			int index = 0;
 			bool hasMoved = true;
+			FastBitmap? lastScan = null;
 
 			while (index < opts.Max)
 			{
@@ -359,11 +360,34 @@ namespace GenshinToolbox.ArtScraper
 					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 
-					using var cap = Capture.Game(ArtifactScanRect);
-					hasMoved = false;
-					var saveFile = Path.Combine(ArtsFolder, $"Art{index:000}.png");
+					var cap = Capture.Game(ArtifactScanRect);
+					var saveFile = Path.Combine(ArtsFolder, $"Art{index:0000}.png");
 					try { File.Delete(saveFile); } catch { }
 					cap.Save(saveFile, ImageFormat.Png);
+					hasMoved = false;
+
+					var currentScan = new FastBitmap(cap);
+					if (lastScan != null)
+					{
+						bool equals = true;
+						for (int i = 0; i < currentScan.Height; i++)
+						{
+							if (!currentScan.GetRow(i).SequenceEqual(lastScan.GetRow(i)))
+							{
+								equals = false;
+								break;
+							}
+						}
+
+						if (equals)
+						{
+							lastScan.DisposeWithBithmap();
+							currentScan.DisposeWithBithmap();
+							break;
+						}
+					}
+					lastScan?.DisposeWithBithmap();
+					lastScan = currentScan;
 				}
 
 				if (!hasMoved)
@@ -380,6 +404,9 @@ namespace GenshinToolbox.ArtScraper
 					if (!Util.GenshinHasFocus()) continue;
 				}
 			}
+
+			Console.WriteLine("Done");
+			Thread.Sleep(1000);
 		}
 
 		static readonly Rectangle MenuOpenScanRect = new(140, 380, 5, 20);

@@ -52,6 +52,12 @@ namespace GenshinToolbox
 			_bmp.UnlockBits(_data);
 		}
 
+		public void DisposeWithBithmap()
+		{
+			Dispose();
+			_bmp.Dispose();
+		}
+
 		public void SetWindow(Rectangle window)
 		{
 			if (window.Left < 0 || window.Right > Width
