@@ -112,7 +112,7 @@ namespace GenshinToolbox
 		[Option('d', "debug", Required = false, Default = false)]
 		public bool Debug { get; set; }
 
-		[Option('m', "max", Required = false, Default = int.MaxValue)]
+		[Option('m', "max", Required = false, Default = null)]
 		public int Max { get; set; }
 		[Option('c', "capture", Required = false, Default = false)]
 		public bool Capture { get; set; }
@@ -120,9 +120,9 @@ namespace GenshinToolbox
 		[Option('a', "analyze", Required = false, Default = false)]
 		public bool Analyze { get; set; }
 
-		[Option('l', "minlevel", Required = false, Default = 0)]
+		[Option('l', "minlevel", Required = false, Default = null)]
 		public int MinLevel { get; set; }
-		[Option('s', "minstars", Required = false, Default = 0)]
+		[Option('s', "minstars", Required = false, Default = null)]
 		public int MinStars { get; set; }
 		[Option('u', "keep-unique", Required = false, Default = false)]
 		public bool KeepUnique { get; set; }

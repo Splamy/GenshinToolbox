@@ -32,7 +32,7 @@ namespace GenshinToolbox
 			return crop;
 		}
 
-		public static Bitmap ResizeTo(this Image image, int width, int height)
+		public static Bitmap ResizeTo(this Image image, int width, int height, bool hq)
 		{
 			var destRect = new Rectangle(0, 0, width, height);
 			var destImage = new Bitmap(width, height, image.PixelFormat);
@@ -41,10 +41,20 @@ namespace GenshinToolbox
 
 			using var graphics = Graphics.FromImage(destImage);
 			graphics.CompositingMode = CompositingMode.SourceCopy;
-			graphics.CompositingQuality = CompositingQuality.HighSpeed;
-			graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-			graphics.SmoothingMode = SmoothingMode.None;
-			graphics.PixelOffsetMode = PixelOffsetMode.None;
+			if (hq)
+			{
+				graphics.CompositingQuality = CompositingQuality.HighQuality;
+				graphics.InterpolationMode = InterpolationMode.High;
+				graphics.SmoothingMode = SmoothingMode.HighQuality;
+				graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+			}
+			else
+			{
+				graphics.CompositingQuality = CompositingQuality.HighSpeed;
+				graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+				graphics.SmoothingMode = SmoothingMode.None;
+				graphics.PixelOffsetMode = PixelOffsetMode.None;
+			}
 			graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel);
 
 			return destImage;

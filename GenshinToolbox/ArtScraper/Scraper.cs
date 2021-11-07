@@ -123,7 +123,8 @@ namespace GenshinToolbox.ArtScraper
 		const string CharsSet = ":";
 
 		const string DbgFolder = "DbgImgs";
-		static readonly string ArtsFolder = Path.Join("..", "..", "ArtImgs");
+		static readonly string ArtsFolder = Path.Join("ArtImgs");
+		const int MaxArtifacts = 1500;
 
 		public static void Run(ArtifactsOptions opts)
 		{
@@ -340,7 +341,7 @@ namespace GenshinToolbox.ArtScraper
 
 		private static void CaptureArts(ArtifactsOptions opts, IXbox360Controller x360)
 		{
-			Directory.Delete(ArtsFolder, true);
+			try { Directory.Delete(ArtsFolder, true); } catch { }
 			Directory.CreateDirectory(ArtsFolder);
 
 			Util.Focus();
@@ -351,7 +352,7 @@ namespace GenshinToolbox.ArtScraper
 			bool hasMoved = true;
 			FastBitmap? lastScan = null;
 
-			while (index < opts.Max)
+			while (index <= MaxArtifacts)
 			{
 				Util.WaitForFocus();
 
@@ -360,7 +361,7 @@ namespace GenshinToolbox.ArtScraper
 					Thread.Sleep(100);
 					if (!Util.GenshinHasFocus()) continue;
 
-					var cap = Capture.Game(ArtifactScanRect);
+					var cap = Capture.Game(ArtifactScanRect, Capture.R1080p);
 					var saveFile = Path.Combine(ArtsFolder, $"Art{index:0000}.png");
 					try { File.Delete(saveFile); } catch { }
 					cap.Save(saveFile, ImageFormat.Png);
@@ -473,7 +474,15 @@ namespace GenshinToolbox.ArtScraper
 			}
 
 			var finalJsonArr = filteredArts.OrderBy(art => art.FileName).ToArray();
-			var text = JsonSerializer.Serialize(finalJsonArr, new JsonSerializerOptions
+			var goodData = new GoodData()
+			{
+				format = "GOOD",
+				dbVersion = 13,
+				source = "GenshinToolbox",
+				version = 1,
+				artifacts = finalJsonArr,
+			};
+			var text = JsonSerializer.Serialize(goodData, new JsonSerializerOptions
 			{
 				WriteIndented = true,
 				Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -787,6 +796,18 @@ namespace GenshinToolbox.ArtScraper
 		public StatGroup Main { get; set; }
 		public List<StatGroup> SubStats { get; set; }
 	}
+
+#pragma warning disable IDE1006 // Naming Styles
+	class GoodData
+	{
+		public string format { get; set; }
+		public int dbVersion { get; set; }
+		public string source { get; set; }
+		public int version { get; set; }
+
+		public ArtData[]? artifacts { get; set; }
+	}
+#pragma warning restore IDE1006 // Naming Styles
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
 	record StatGroup(Stat Type, float Value, string Raw)

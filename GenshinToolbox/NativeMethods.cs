@@ -21,11 +21,11 @@ namespace GenshinToolbox
 		[DllImport("user32.dll")]
 		private static extern bool SetCursorPos(int x, int y);
 
-		// Gets the Absolute (X/Y/X+W/Y+H) Coordinated of a window (With Border)
+		// Gets the Absolute (X/Y/X+W/Y+H) Coordinates of a window (With Border)
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-		// Gets relative the size (X=0/Y=0/X+W/Y+H) of the windows content
+		// Gets relative the size (X=0/Y=0/X+W/Y+H) of the windows content (Obviously without Border)
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 

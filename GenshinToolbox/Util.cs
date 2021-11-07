@@ -17,11 +17,12 @@ namespace GenshinToolbox
 
 		private static readonly Point MinimizedLoc = new(-32000, -32000);
 
-		private static Point? _WindowOffset = null;
+		private static Rectangle? _WindowOffset = null;
 		private static Process? _proc = null;
 
 		public static readonly InputSimulator inp = new();
-		public static Point WindowOffset => GetWindowRect();
+		public static Point WindowOffset => ClientToScreenInternal().Location;
+		public static Size WindowSize => ClientToScreenInternal().Size;
 
 		public static void Focus()
 		{
@@ -36,15 +37,17 @@ namespace GenshinToolbox
 			return _proc ??= Process.GetProcessesByName("GenshinImpact")[0];
 		}
 
-		private static Point GetWindowRect()
+		private static Rectangle ClientToScreenInternal()
 		{
-			if (_WindowOffset is { } off && off != MinimizedLoc)
+			if (_WindowOffset is { } off && off.Location != MinimizedLoc)
 				return _WindowOffset.Value;
 
 			var proc = GetProcess();
-			off = ClientToScreen(proc.MainWindowHandle);
-			_WindowOffset = off;
-			return off;
+			var loc = ClientToScreen(proc.MainWindowHandle);
+			var size = GetClientRect(proc.MainWindowHandle).Size;
+			var rect = new Rectangle(loc, size);
+			_WindowOffset = rect;
+			return rect;
 		}
 
 		public static bool GenshinHasFocus()
