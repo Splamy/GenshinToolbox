@@ -5,6 +5,7 @@ using GenshinToolbox.Fisher;
 using GenshinToolbox.Player;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 
 namespace GenshinToolbox
@@ -18,6 +19,8 @@ namespace GenshinToolbox
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
+			AppDomain.CurrentDomain.UnhandledException += OnException;
+
 			MuseEngine.Validate();
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -26,7 +29,8 @@ namespace GenshinToolbox
 				(Func<CollectOptions, int>)RunCollect,
 				(Func<ArtifactsOptions, int>)RunArtifacts,
 				(Func<FisherOptions, int>)RunFisher,
-				(UtilOptions _) => {
+				(UtilOptions _) =>
+				{
 					ImgMatch.DoStuff();
 					return 0;
 				},
@@ -35,6 +39,11 @@ namespace GenshinToolbox
 					ConsoleSelector();
 					return 0;
 				});
+		}
+
+		private static void OnException(object sender, UnhandledExceptionEventArgs e)
+		{
+			File.WriteAllText("./crash.log", e.ToString());
 		}
 
 		static void ConsoleSelector()

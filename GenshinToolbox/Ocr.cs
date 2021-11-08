@@ -1,7 +1,9 @@
 ﻿using IronOcr;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Threading;
 
 namespace GenshinToolbox
 {
@@ -88,5 +90,26 @@ namespace GenshinToolbox
 
 		public static string Allow(this IEnumerable<string> enu) => enu.SelectMany(x => x).Allow();
 		public static string Allow(this IEnumerable<char> enu) => string.Join("", enu.Distinct().OrderBy(x => x));
+
+		private static readonly object ocrSync = new();
+		public static OcrInput CreateSafe(Bitmap bmp)
+		{
+			for (int i = 0; i < 5; i++)
+			{
+				try
+				{
+					lock (ocrSync)
+					{
+						return new OcrInput(bmp);
+					}
+				}
+				catch
+				{
+					Console.WriteLine("IronOCR is weird again...");
+					Thread.Sleep(10);
+				}
+			}
+			throw new Exception("Could not create ocr input");
+		}
 	}
 }

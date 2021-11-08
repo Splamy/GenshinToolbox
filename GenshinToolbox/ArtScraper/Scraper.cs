@@ -507,7 +507,7 @@ namespace GenshinToolbox.ArtScraper
 				if (postprocess != null) crop.ApplyFilter(postprocess);
 				if (opts.Debug) crop.Save(Path.Combine(DbgFolder, $"dbg_{dbgName}.png"), ImageFormat.Png);
 				using var ocrCrop = crop.ToOcrPixelFormat();
-				using var Input = new OcrInput(ocrCrop);
+				using var Input = Ocr.CreateSafe(ocrCrop);
 				ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleLine;
 				var Result = ocr.Read(Input);
 				//ocr.Configuration.PageSegmentationMode = TesseractPageSegmentationMode.SingleBlock;
