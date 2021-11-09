@@ -1,11 +1,10 @@
-﻿namespace GenshinToolbox.ArtScraper
+﻿namespace GenshinToolbox.ArtScraper;
+
+enum Slot
 {
-	enum Slot
-	{
-		Flower,
-		Plume,
-		Sands,
-		Goblet,
-		Circlet
-	}
+    Flower,
+    Plume,
+    Sands,
+    Goblet,
+    Circlet
 }

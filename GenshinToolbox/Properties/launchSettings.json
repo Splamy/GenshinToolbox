@@ -2,7 +2,7 @@
   "profiles": {
     "GenshinToolbox": {
       "commandName": "Project",
-      "commandLineArgs": "artifacts"
+      "commandLineArgs": "player"
     }
   }
 }
