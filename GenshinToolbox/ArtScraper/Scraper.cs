@@ -3,6 +3,7 @@ using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -33,6 +34,8 @@ static partial class Scraper
 
 	public static void Run(ArtifactsOptions opts)
 	{
+		StaticInit();
+
 		using var c = new ViGEmClient();
 		var x360 = c.CreateXbox360Controller();
 		bool connected = false;
@@ -99,6 +102,15 @@ static partial class Scraper
 				break;
 			}
 		}
+	}
+
+	private static void StaticInit() {
+		Trace.Assert(SetNames.Count > 0);
+		Trace.Assert(SlotNames.Count > 0);
+		Trace.Assert(StatCategory.Count > 0);
+		Trace.Assert(StatNames.Count > 0);
+		using var bmp = new Bitmap(4,4);
+		using var ocri = new OcrInput(bmp);
 	}
 
 	// Kbd / Controller switching utils
@@ -465,12 +477,12 @@ static partial class Scraper
 		);
 		var slotData = StatCategory[slot];
 
-		ocr.Configuration.WhiteListCharacters = slotData.main.Select(s => StatNames[s]).Allow();
+		ocr.Configuration.WhiteListCharacters = slotData.Main.Select(s => StatNames[s]).Allow();
 		Stat mainStat = ProcessStat(
 			"mainStat",
 			Areas[2],
 			ImageExt.GrayFilter,
-			text => slotData.main.Select(s => (s, StatNames[s])).FindClosest(text)
+			text => slotData.Main.Select(s => (s, StatNames[s])).FindClosest(text)
 		);
 
 		ocr.Configuration.WhiteListCharacters = CharsNumbers.Allow();
@@ -480,11 +492,11 @@ static partial class Scraper
 			ImageExt.WhiteFilter,
 			text => text
 		);
-		mainStat = ModStatWithPercent(mainStat, mainStatValueText, slotData.main);
+		mainStat = ModStatWithPercent(mainStat, mainStatValueText, slotData.Main);
 		float mainStatValue = ParseNumber(mainStatValueText, mainStat);
 
 		var subStats = new List<StatGroup>();
-		var allowedSubstats = new List<Stat>(slotData.sub);
+		var allowedSubstats = new List<Stat>(slotData.Sub);
 		allowedSubstats.Remove(mainStat);
 		for (int i = 0; i < 4; i++)
 		{
@@ -563,7 +575,7 @@ static partial class Scraper
 		};
 	}
 
-	public static Stat ModStatWithPercent(Stat orig, string value, IList<Stat> valid)
+	public static Stat ModStatWithPercent(Stat orig, string value, IReadOnlyList<Stat> valid)
 	{
 		bool hasPerc = value.Contains('%');
 		return orig switch

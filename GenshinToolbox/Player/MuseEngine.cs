@@ -546,9 +546,9 @@ public static class NoteLength
 
 	public const int Full = 128;
 	public const int HalfN = Full / 2;
-	public const int HalfDot = HalfN + HalfN / 2;
+	public const int HalfDot = HalfN + (HalfN / 2);
 	public const int Quart = Full / 4;
-	public const int QuartDot = Quart + Quart / 2;
+	public const int QuartDot = Quart + (Quart / 2);
 	public const int Eigth = Full / 8;
-	public const int EigthDot = Eigth + Eigth / 2;
+	public const int EigthDot = Eigth + (Eigth / 2);
 }

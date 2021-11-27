@@ -5,6 +5,7 @@ using GenshinToolbox.Fisher;
 using GenshinToolbox.Player;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Threading;
 
 namespace GenshinToolbox;
@@ -21,7 +22,7 @@ static class Program
 		AppDomain.CurrentDomain.UnhandledException += OnException;
 
 		MuseEngine.Validate();
-		Console.OutputEncoding = System.Text.Encoding.UTF8;
+		Console.OutputEncoding = Encoding.UTF8;
 
 		Parser.Default.ParseArguments<PlayerOptions, CollectOptions, ArtifactsOptions, FisherOptions, UtilOptions>(args).MapResult(
 			(Func<PlayerOptions, int>)RunPlayer,
@@ -42,7 +43,10 @@ static class Program
 
 	private static void OnException(object sender, UnhandledExceptionEventArgs e)
 	{
-		File.WriteAllText("./crash.log", e.ToString());
+		var strb = new StringBuilder();
+		strb.AppendLine(e.ToString());
+		strb.AppendLine(e.ExceptionObject.ToString());
+		File.WriteAllText("./crash.log", strb.ToString());
 	}
 
 	static void ConsoleSelector()
