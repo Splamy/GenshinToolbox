@@ -104,12 +104,13 @@ static partial class Scraper
 		}
 	}
 
-	private static void StaticInit() {
+	private static void StaticInit()
+	{
 		Trace.Assert(SetNames.Count > 0);
 		Trace.Assert(SlotNames.Count > 0);
 		Trace.Assert(StatCategory.Count > 0);
 		Trace.Assert(StatNames.Count > 0);
-		using var bmp = new Bitmap(4,4);
+		using var bmp = new Bitmap(4, 4);
 		using var ocri = new OcrInput(bmp);
 	}
 
@@ -375,6 +376,14 @@ static partial class Scraper
 		var collisionList = new Dictionary<string, int>();
 		foreach (var art in artList.OrderByDescending(x => x.Level).ThenByDescending(x => x.Stars))
 		{
+			if (UnusableSets.Contains(art.ArtSet))
+				continue;
+			if (art.Level <= 0)
+			{
+				Console.WriteLine("INVALID Artifact: {0}", art.FileName);
+				continue;
+			}
+
 			// Add Artifact to result if either it fits the filter, or is unique.
 			var artGroup = (art.Slot, art.ArtSet, art.Main.Type);
 			if ((art.Stars < opts.MinStars || art.Level < opts.MinLevel) && uniqueList.Contains(artGroup))
@@ -496,7 +505,7 @@ static partial class Scraper
 		float mainStatValue = ParseNumber(mainStatValueText, mainStat);
 
 		var subStats = new List<StatGroup>();
-		var allowedSubstats = new List<Stat>(slotData.Sub);
+		var allowedSubstats = new HashSet<Stat>(slotData.Sub);
 		allowedSubstats.Remove(mainStat);
 		for (int i = 0; i < 4; i++)
 		{
@@ -575,7 +584,7 @@ static partial class Scraper
 		};
 	}
 
-	public static Stat ModStatWithPercent(Stat orig, string value, IReadOnlyList<Stat> valid)
+	public static Stat ModStatWithPercent(Stat orig, string value, IReadOnlySet<Stat> valid)
 	{
 		bool hasPerc = value.Contains('%');
 		return orig switch

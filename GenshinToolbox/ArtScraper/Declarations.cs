@@ -1,8 +1,10 @@
-﻿namespace GenshinToolbox.ArtScraper;
+﻿using System.Collections.Generic;
+
+namespace GenshinToolbox.ArtScraper;
 
 partial class Scraper
 {
-	private static readonly Dictionary<Stat, string> StatNames = new()
+	private static readonly IReadOnlyDictionary<Stat, string> StatNames = new Dictionary<Stat, string>()
 	{
 		{ Stat.Atk, "ATK" },
 		{ Stat.AtkPerc, "ATK" },
@@ -24,47 +26,51 @@ partial class Scraper
 		{ Stat.HealingBonusPerc, "Healing Bonus" },
 	};
 
-	private static readonly Dictionary<ArtSet, string> SetNames = new()
+	private static readonly IReadOnlyDictionary<ArtSet, string> SetNames = new Dictionary<ArtSet, string>()
 	{
-		{ ArtSet.GladiatorsFinale, "Gladiator's Finale" },
-		{ ArtSet.WanderersTroupe, "Wanderer's Troupe" },
-		{ ArtSet.ViridescentVenerer, "Viridescent Venerer" },
-		{ ArtSet.ThunderingFury, "Thundering Fury" },
-		{ ArtSet.Thundersoother, "Thundersoother" },
-		{ ArtSet.CrimsonWitchOfFlames, "Crimson Witch of Flames" },
-		{ ArtSet.Lavawalker, "Lavawalker" },
+		{ ArtSet.Adventurer, "Adventurer" },
 		{ ArtSet.ArchaicPetra, "Archaic Petra" },
-		{ ArtSet.RetracingBolide, "Retracing Bolide" },
-		{ ArtSet.MaidenBeloved, "Maiden Beloved" },
-		{ ArtSet.NoblesseOblige, "Noblesse Oblige" },
-		{ ArtSet.BloodstainedChivalry, "Bloodstained Chivalry" },
+		{ ArtSet.Berserker, "Berserker" },
 		{ ArtSet.BlizzardStrayer, "Blizzard Strayer" },
-		{ ArtSet.HeartOfDepth, "Heart of Depth" },
-		{ ArtSet.TenacityOfTheMillelith, "Tenacity of the Millelith" },
-		{ ArtSet.PaleFlame, "Pale Flame" },
-		{ ArtSet.EmblemOfSeveredFate, "Emblem of Severed Fate" },
-		{ ArtSet.ShimenawasReminiscence, "Shimenawa's Reminiscence" },
-		{ ArtSet.Instructor, "Instructor" },
-		{ ArtSet.TheExile, "The Exile" },
-		{ ArtSet.ResolutionOfSojourner, "Resolution of Sojourner" },
-		{ ArtSet.MartialArtist, "Martial Artist" },
-		{ ArtSet.DefendersWill, "Defender's Will" },
-		{ ArtSet.TinyMiracle, "Tiny Miracle" },
+		{ ArtSet.BloodstainedChivalry, "Bloodstained Chivalry" },
 		{ ArtSet.BraveHeart, "Brave Heart" },
+		{ ArtSet.CrimsonWitchOfFlames, "Crimson Witch of Flames" },
+		{ ArtSet.DefendersWill, "Defender's Will" },
+		{ ArtSet.EmblemOfSeveredFate, "Emblem of Severed Fate" },
 		{ ArtSet.Gambler, "Gambler" },
-		{ ArtSet.Scholar, "Scholar" },
+		{ ArtSet.GladiatorsFinale, "Gladiator's Finale" },
+		{ ArtSet.HeartOfDepth, "Heart of Depth" },
+		{ ArtSet.HuskOfOpulentDreams, "Husk of Opulent Dreams" },
+		{ ArtSet.Initiate, "Initiate" },
+		{ ArtSet.Instructor, "Instructor" },
+		{ ArtSet.Lavawalker, "Lavawalker" },
+		{ ArtSet.LuckyDog, "Lucky Dog" },
+		{ ArtSet.MaidenBeloved, "Maiden Beloved" },
+		{ ArtSet.MartialArtist, "Martial Artist" },
+		{ ArtSet.NoblesseOblige, "Noblesse Oblige" },
+		{ ArtSet.OceanHuedClam, "Ocean-Hued Clam" },
+		{ ArtSet.PaleFlame, "Pale Flame" },
+		{ ArtSet.PrayersForDestiny, "Prayers for Destiny" },
+		{ ArtSet.PrayersForIllumination, "Prayers for Illumination" },
 		{ ArtSet.PrayersForWisdom, "Prayers for Wisdom" },
 		{ ArtSet.PrayersToSpringtime, "Prayers to Springtime" },
-		{ ArtSet.PrayersForIllumination, "Prayers for Illumination" },
-		{ ArtSet.PrayersForDestiny, "Prayers for Destiny" },
-		{ ArtSet.Berserker, "Berserker" },
-		{ ArtSet.LuckyDog, "Lucky Dog" },
+		{ ArtSet.ResolutionOfSojourner, "Resolution of Sojourner" },
+		{ ArtSet.RetracingBolide, "Retracing Bolide" },
+		{ ArtSet.Scholar, "Scholar" },
+		{ ArtSet.ShimenawasReminiscence, "Shimenawa's Reminiscence" },
+		{ ArtSet.TenacityOfTheMillelith, "Tenacity of the Millelith" },
+		{ ArtSet.TheExile, "The Exile" },
+		{ ArtSet.ThunderingFury, "Thundering Fury" },
+		{ ArtSet.Thundersoother, "Thundersoother" },
+		{ ArtSet.TinyMiracle, "Tiny Miracle" },
 		{ ArtSet.TravelingDoctor, "Traveling Doctor" },
-		{ ArtSet.Adventurer, "Adventurer" },
-		{ ArtSet.Initiate, "Initiate" },
+		{ ArtSet.ViridescentVenerer, "Viridescent Venerer" },
+		{ ArtSet.WanderersTroupe, "Wanderer's Troupe" },
 	};
 
-	private static readonly Dictionary<Slot, string> SlotNames = new()
+	private static readonly IReadOnlySet<ArtSet> UnusableSets = new HashSet<ArtSet> { ArtSet.Initiate };
+
+	private static readonly IReadOnlyDictionary<Slot, string> SlotNames = new Dictionary<Slot, string>()
 	{
 		{ Slot.Flower, "Flower of Life" },
 		{ Slot.Plume, "Plume of Death" },
@@ -73,7 +79,7 @@ partial class Scraper
 		{ Slot.Circlet, "Circlet of Logos" },
 	};
 
-	private static readonly Stat[] SubStats = new[] {
+	private static readonly IReadOnlySet<Stat> SubStats = new HashSet<Stat> {
 		Stat.Atk,
 		Stat.AtkPerc,
 		Stat.Hp,
@@ -86,14 +92,14 @@ partial class Scraper
 		Stat.CritRate,
 	};
 
-	record struct SlotStatsGroup(IReadOnlyList<Stat> Main, IReadOnlyList<Stat> Sub);
+	record struct SlotStatsGroup(IReadOnlySet<Stat> Main, IReadOnlySet<Stat> Sub);
 
 	private static readonly Dictionary<Slot, SlotStatsGroup> StatCategory = new()
 	{
-		{ Slot.Flower, new(new[] { Stat.Hp }, SubStats) },
-		{ Slot.Plume, new(new[] { Stat.Atk }, SubStats) },
-		{ Slot.Sands, new(new[] { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.EnergyRecharge }, SubStats) },
-		{ Slot.Goblet, new(new[] { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.PyroDmgBonus, Stat.HydroDmgBonus, Stat.ElectroDmgBonus, Stat.AnemoDmgBonus, Stat.CryoDmgBonus, Stat.GeoDmgBonus, Stat.PhysicalDmgBonus, }, SubStats) },
-		{ Slot.Circlet, new(new[] { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.CritRate, Stat.CritDmg, Stat.HealingBonusPerc }, SubStats) },
+		{ Slot.Flower, new(new HashSet<Stat>() { Stat.Hp }, SubStats) },
+		{ Slot.Plume, new(new HashSet<Stat>() { Stat.Atk }, SubStats) },
+		{ Slot.Sands, new(new HashSet<Stat>() { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.EnergyRecharge }, SubStats) },
+		{ Slot.Goblet, new(new HashSet<Stat>() { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.PyroDmgBonus, Stat.HydroDmgBonus, Stat.ElectroDmgBonus, Stat.AnemoDmgBonus, Stat.CryoDmgBonus, Stat.GeoDmgBonus, Stat.PhysicalDmgBonus, }, SubStats) },
+		{ Slot.Circlet, new(new HashSet<Stat>() { Stat.HpPerc, Stat.AtkPerc, Stat.DefPerc, Stat.ElementalMastery, Stat.CritRate, Stat.CritDmg, Stat.HealingBonusPerc }, SubStats) },
 	};
 }
