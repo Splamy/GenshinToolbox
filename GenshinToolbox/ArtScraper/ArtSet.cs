@@ -10,6 +10,7 @@ enum ArtSet
 	BraveHeart,
 	CrimsonWitchOfFlames,
 	DefendersWill,
+	EchoesOfAnOffering,
 	EmblemOfSeveredFate,
 	Gambler,
 	GladiatorsFinale,
@@ -38,6 +39,7 @@ enum ArtSet
 	Thundersoother,
 	TinyMiracle,
 	TravelingDoctor,
+	VermillionHereafter,
 	ViridescentVenerer,
 	WanderersTroupe,
 }

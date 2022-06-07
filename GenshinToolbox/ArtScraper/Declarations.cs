@@ -36,6 +36,7 @@ partial class Scraper
 		{ ArtSet.BraveHeart, "Brave Heart" },
 		{ ArtSet.CrimsonWitchOfFlames, "Crimson Witch of Flames" },
 		{ ArtSet.DefendersWill, "Defender's Will" },
+		{ ArtSet.EchoesOfAnOffering, "Echoes of an Offering" },
 		{ ArtSet.EmblemOfSeveredFate, "Emblem of Severed Fate" },
 		{ ArtSet.Gambler, "Gambler" },
 		{ ArtSet.GladiatorsFinale, "Gladiator's Finale" },
@@ -64,6 +65,7 @@ partial class Scraper
 		{ ArtSet.Thundersoother, "Thundersoother" },
 		{ ArtSet.TinyMiracle, "Tiny Miracle" },
 		{ ArtSet.TravelingDoctor, "Traveling Doctor" },
+		{ ArtSet.VermillionHereafter, "Vermillion Hereafter" },
 		{ ArtSet.ViridescentVenerer, "Viridescent Venerer" },
 		{ ArtSet.WanderersTroupe, "Wanderer's Troupe" },
 	};

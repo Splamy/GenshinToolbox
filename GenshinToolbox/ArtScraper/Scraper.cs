@@ -329,7 +329,7 @@ static partial class Scraper
 	}
 
 	static readonly Rectangle MenuOpenScanRect = new(140, 380, 5, 20);
-	static readonly Rectangle ArtifactScanRect = new(1330, 133, 410, 815);
+	static readonly Rectangle ArtifactScanRect = new(1343, 133, 410, 815);
 	private static readonly Rectangle[] Areas = new Rectangle[] {
 			new(20, 5, 365, 35), // Name
 			new(20, 56, 217, 25), // SubName
@@ -467,14 +467,14 @@ static partial class Scraper
 			return null;
 
 		ocr.Configuration.WhiteListCharacters = (Numbers + "+").Allow();
-		var levelNum = ProcessStat(
+		var levelNumOpt = ProcessStat<int?>(
 			"level",
 			Areas[4],
 			ImageExt.WhiteScaleFilter,
-			text => int.TryParse(text, out var num) ? num : -1
+			text => int.TryParse(text, out var num) ? num : null
 		);
 
-		if (levelNum < opts.MinLevel && !opts.KeepUnique)
+		if (levelNumOpt is not { } levelNum || (levelNum < opts.MinLevel && !opts.KeepUnique))
 			return null;
 
 		ocr.Configuration.WhiteListCharacters = SlotNames.Values.Allow();
